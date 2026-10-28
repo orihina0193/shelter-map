@@ -327,7 +327,7 @@ function gameCoords(gx, gy) {
 const coordText = (gx, gy) => { const g = gameCoords(gx, gy); return g ? `X:${g.x} Y:${g.y}` : `マス ${gx}:${gy}`; };
 
 /* ---------- 当たり判定 ---------- */
-const overlap = (ax, ay, aw, ah, bx, by, bw, bh) => ax < bx + bw && bx < ax + aw && ay < by + ah && by < ay + bh;
+const overlap = (ax, ay, aw, ah, bx, by, bw, bh) => ax < bx + bw && bx < ax + aw && ay < by + bh && by < ay + ah;
 function blocked(x, y, gw, gh, ignoreShelter = null, ignoreItem = null) {
   if (x < -20 || y < -20 || x + gw > 41 || y + gh > 41) return true;
   for (const d of base.m) {
