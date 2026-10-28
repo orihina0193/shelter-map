@@ -754,6 +754,10 @@ $("btnCancelPlace").onclick = () => { placing = null; preview = null; render(); 
 $("btnOk").onclick = async () => {
   if (!placing || !preview?.ok) return;
   const t = placing;
+  // 決定の瞬間に、最新の状態でもう一度確認する
+  if (blocked(preview.x, preview.y, HQ.gw, HQ.gh, t.target === "new" ? null : t.target)) {
+    preview.ok = false; render(); toast("先に他の人が置きました。別の場所を選んでください"); return;
+  }
   try {
     if (t.target === "new") {
       await setDoc(doc(db, "rooms", ROOM, "shelters", user.uid), {
@@ -831,6 +835,12 @@ function startListening() {
   onSnapshot(collection(db, "rooms", ROOM, "shelters"), s => {
     shelters = s.docs.map(d => ({ id: d.id, ...d.data() }));
     if (placing && placing.target !== "new" && !shelters.some(x => x.id === placing.target)) { placing = null; preview = null; }
+    // 選び中の場所に、他の人が先に置いたら赤に切り替える
+    if (placing && preview) {
+      const ok = !blocked(preview.x, preview.y, HQ.gw, HQ.gh, placing.target === "new" ? null : placing.target);
+      if (preview.ok && !ok) toast("他の人が先に置きました。別の場所を選んでください");
+      preview.ok = ok;
+    }
     render();
   }, onErr);
 }
