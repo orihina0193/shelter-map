@@ -160,7 +160,8 @@
     </div>
     <div id="aAssets"></div>
     <div class="sl"><label>サイズ</label><input type="range" id="sSize" min="0.1" max="5" step="0.05"></div>
-    <div class="sl"><label>接地</label><input type="range" id="sOff" min="-100" max="100" step="1"></div>
+    <div class="sl"><label>上下</label><input type="range" id="sOff" min="-100" max="100" step="1"></div>
+    <div class="sl"><label>左右</label><input type="range" id="sLR" min="-2" max="2" step="0.05"></div>
     <div class="row">
       <button id="btnCoord">座標登録</button>
       <button class="dng" id="btnClear">全消去</button>
@@ -641,9 +642,16 @@ function buildAssetGrid() {
 }
 function syncSliders() {
   const d = base.m.find(m => m.id === selItem);
-  $("sSize").disabled = $("sOff").disabled = !d;
+  $("sSize").disabled = $("sOff").disabled = $("sLR").disabled = !d;
   $("sSize").value = d ? d.s : 1; $("sOff").value = d ? d.off : 0;
+  $("sLR").value = d ? +(d.ox - PM[d.a].ox).toFixed(2) : 0;
 }
+// 左右: 画面の横方向に動かす(等角グリッドではxを増やしyを減らすと右へ動く)
+$("sLR").oninput = e => {
+  const d = base.m.find(m => m.id === selItem); if (!d) return;
+  const v = parseFloat(e.target.value), P = PM[d.a];
+  d.ox = +(P.ox + v).toFixed(2); d.oy = +(P.oy - v).toFixed(2); markDirty();
+};
 $("sSize").oninput = e => { const d = base.m.find(m => m.id === selItem); if (d) { d.s = parseFloat(e.target.value); markDirty(); } };
 $("sOff").oninput = e => { const d = base.m.find(m => m.id === selItem); if (d) { d.off = parseInt(e.target.value); markDirty(); } };
 document.querySelectorAll("#toolRow button").forEach(b => b.onclick = () => { tool = b.dataset.tool; render(); });
