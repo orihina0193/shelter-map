@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>避難所配置マップ</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
+    font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+    background: #e0e5ec; color: #1f2937; font-size: 14px; touch-action: none; user-select: none;
+  }
+  [hidden] { display: none !important; }
+  button { font: inherit; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: #1f2937; border-radius: 8px; padding: 8px 10px; font-weight: 700; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.pri { background: #007aff; border-color: #007aff; color: #fff; }
+  button.warn { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+  button.dng { background: #ef4444; border-color: #ef4444; color: #fff; }
+  button.on { background: #007aff; border-color: #007aff; color: #fff; }
+  button.sm { padding: 5px 8px; font-size: 12px; }
+  input[type=text], input[type=password], input[type=number] {
+    font: inherit; width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #111; user-select: text;
+  }
+  #top { flex: none; display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #fff; border-bottom: 1px solid #cbd5e1; }
+  #top h1 { margin: 0; font-size: 15px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #dirty { background: #ef4444; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+  #count { font-size: 12px; color: #475569; white-space: nowrap; }
+  #wrap { flex: 1; position: relative; min-height: 0; background: #f0f0f0; }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #toast { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 9px 16px; border-radius: 10px; font-weight: 700; font-size: 13px; z-index: 50; max-width: 90vw; text-align: center; }
+  #panel { flex: none; max-height: 48dvh; overflow-y: auto; background: #fff; border-top: 1px solid #cbd5e1; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; touch-action: pan-y; }
+  #cellbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; font-weight: 700; font-size: 13px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > * { flex: 1; min-width: 0; }
+  .row > .fix { flex: none; }
+  .col { display: flex; flex-direction: column; gap: 8px; }
+  .hint { font-size: 12px; color: #64748b; line-height: 1.5; }
+  .title { font-weight: 800; font-size: 14px; }
+  details summary { cursor: pointer; font-weight: 700; font-size: 13px; color: #475569; }
+  .tabs { display: flex; gap: 4px; }
+  .tabs button { flex: 1; padding: 7px 4px; font-size: 12px; }
+  .list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+  .item { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 8px; }
+  .item .nm { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .pin { font-size: 10px; color: #16a34a; font-weight: 700; }
+  #aAssets { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; max-height: 120px; overflow-y: auto; }
+  #aAssets .as { aspect-ratio: 1; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff center/contain no-repeat; position: relative; cursor: pointer; }
+  #aAssets .as.sel { border: 2px solid #007aff; box-shadow: 0 0 0 2px #bae0ff; }
+  #aAssets .as span { position: absolute; right: 1px; bottom: 1px; font-size: 8px; background: rgba(0,0,0,.6); color: #fff; padding: 0 3px; border-radius: 3px; }
+  .sl { display: flex; align-items: center; gap: 8px; }
+  .sl label { width: 34px; font-size: 11px; font-weight: 700; color: #64748b; }
+  .sl input { flex: 1; }
+  #modal { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; touch-action: auto; }
+  #mBox { width: 100%; max-width: 380px; background: #fff; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; max-height: 85dvh; overflow-y: auto; }
+  #mTitle { font-weight: 800; font-size: 15px; }
+  #mBody { display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.6; }
+  #mBtns { display: flex; gap: 8px; }
+  #mBtns button { flex: 1; padding: 10px; }
+</style>
+</head>
+<body>
+
+<div id="top">
+  <h1>🏠 避難所配置マップ</h1>
+  <span id="dirty" hidden>未保存</span>
+  <span id="count"></span>
+  <button class="sm" id="btnRoster">名簿</button>
+  <button class="sm" id="btnAdmin">👑</button>
+</div>
+
+<div id="wrap"><canvas id="cv"></canvas></div>
+<div id="toast" hidden></div>
+
+<div id="panel">
+  <div id="cellbar">
+    <span id="cellTxt">タップしたマスの座標を表示します</span>
+    <button class="sm pri" id="btnCopy" hidden>コピー</button>
+  </div>
+
+  <div id="adminTabs" class="tabs" hidden>
+    <button data-tab="me">自分の避難所</button>
+    <button data-tab="members">メンバー管理</button>
+    <button data-tab="base">ベース編集</button>
+  </div>
+
+  <!-- まだ置いていない人 -->
+  <div id="sNew" class="col" hidden>
+    <div class="title">自分の避難所を置こう</div>
+    <input type="text" id="inName" maxlength="20" placeholder="名前(ゲーム内の名前)">
+    <input type="password" id="inPin" maxlength="30" placeholder="PIN(任意・機種変更の復帰用 4文字以上)">
+    <button class="pri" id="btnStart">置く場所を決める</button>
+    <details>
+      <summary>機種変更・ブラウザ変更で枠に戻れなくなったら</summary>
+      <div class="col" style="margin-top:8px">
+        <div class="hint">上の「名前」と「PIN」を入れて押すと、自分の避難所に戻れます。PINを設定していなかった人はリーダーに「解放」を頼んでください。</div>
+        <button id="btnClaim">名前+PINで復帰する</button>
+      </div>
+    </details>
+  </div>
+
+  <!-- 置いた人 -->
+  <div id="sMe" class="col" hidden>
+    <div class="title" id="meTitle"></div>
+    <div class="row">
+      <button class="pri" id="btnMove">場所を移動</button>
+      <button id="btnPin">PIN設定</button>
+      <button class="dng" id="btnDel">削除</button>
+    </div>
+  </div>
+
+  <!-- 位置決め中 -->
+  <div id="sPlace" class="col" hidden>
+    <div class="title" id="placeTitle">マップをタップして場所を選んでください</div>
+    <div class="hint" id="placeHint">緑=置ける / 赤=他の建物と重なっています。ドラッグでマップ移動、ピンチで拡大縮小。</div>
+    <div class="row">
+      <button id="btnCancelPlace">キャンセル</button>
+      <button class="pri" id="btnOk" disabled>ここに決定</button>
+    </div>
+  </div>
+
+  <!-- リーダー: メンバー管理 -->
+  <div id="sMembers" class="col" hidden>
+    <div class="title">メンバー管理</div>
+    <div class="hint">解放=その人の避難所を削除(置き直せる) / PIN解除=位置はそのままPINだけ消す / 移動=代わりに動かす</div>
+    <div id="aList" class="list"></div>
+  </div>
+
+  <!-- リーダー: ベース編集 -->
+  <div id="sBase" class="col" hidden>
+    <div class="title">ベースマップ編集</div>
+    <div class="row" id="toolRow">
+      <button data-tool="place">配置</button>
+      <button data-tool="move">移動</button>
+      <button data-tool="erase">建物消</button>
+      <button data-tool="pen">線</button>
+      <button data-tool="lerase">線消</button>
+    </div>
+    <div id="aAssets"></div>
+    <div class="sl"><label>サイズ</label><input type="range" id="sSize" min="0.1" max="5" step="0.05"></div>
+    <div class="sl"><label>接地</label><input type="range" id="sOff" min="-100" max="100" step="1"></div>
+    <div class="row">
+      <button id="btnCoord">座標登録</button>
+      <button class="dng" id="btnClear">全消去</button>
+      <button id="btnDiscard">破棄</button>
+      <button class="pri" id="btnSave">保存</button>
+    </div>
+    <div class="hint">「座標登録」: 先にマップ上でゲーム内座標が分かるマスをタップして選んでから押してください。</div>
+  </div>
+</div>
+
+<div id="modal" hidden>
+  <div id="mBox">
+    <div id="mTitle"></div>
+    <div id="mBody"></div>
+    <div id="mBtns"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithPopup, GoogleAuthProvider, signOut }
+  from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, deleteDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAYP4N7faBxXY4MzVT77Or-liXVAttewiE",
+  authDomain: "shelter-map-f3bb5.firebaseapp.com",
+  projectId: "shelter-map-f3bb5",
+  storageBucket: "shelter-map-f3bb5.firebasestorage.app",
+  messagingSenderId: "202567597650",
+  appId: "1:202567597650:web:feb5b02d2104577671698b"
+};
+const ADMIN_EMAIL = "alexandrite0193@gmail.com"; // 表示切替用。本当の権限チェックはfirestore.rules側
+const MAX_MEMBERS = 100;
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const ROOM = (new URLSearchParams(location.search).get("room") || "main").replace(/[\/\s]/g, "_");
+
+/* ---------- 素材 ---------- */
+const IMG = "https://raw.githubusercontent.com/orihina0193/map-tool/main/img/";
+// [name, file, scale, offset, gw, gh, ox, oy, fallbackFile]
+const PRESETS = [
+  ["HQ","HQ.png",1.6,1,2,2,-0.1,-0.2],
+  ["DOOM","DOOM.png",1.6,-3,2,2,-0.2,0],
+  ["MED","MED.png",1.6,-1,2,2,-0.1,-0.1],
+  ["SRG","SRG.png",1.7,-3,2,2,-0.1,-0.1],
+  ["RSS","RSS.png",1.6,-4,2,2,-0.2,-0.3],
+  ["ST","ST.png",1.6,0,2,2,-0.2,-0.2],
+  ["OP","OP.png",0.8,0,1,1,-0.1,-0.1],
+  ["tile","tile.png",1.6,1,2,2,-0.1,-0.2,"tile_stone_se.png"],
+  ["ROCK2","ROCK2.png",0.75,-5,1,1,0,0],
+  ["岩(南東)","tile_stone_se.png",2.0,0,2,2,0,0],
+  ["岩(南西)","tile_stone_sw.png",2.0,0,2,2,0,0],
+  ["岩(北西)","tile_stone_nw.png",2.0,0,2,2,0,0],
+  ["岩(北東)","tile_stone_ne.png",2.0,0,2,2,0,0],
+].map(([name,file,s,o,gw,gh,ox,oy,fb]) => ({name,file,s,o,gw,gh,ox,oy,fb}));
+const PM = Object.fromEntries(PRESETS.map(p => [p.name, p]));
+const assets = {}; // name -> canvas
+
+const loadImg = (url) => new Promise(r => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => r(i); i.onerror = () => r(null); i.src = url; });
+
+function cropToCanvas(img) {
+  const c = document.createElement("canvas"); c.width = img.width; c.height = img.height;
+  const t = c.getContext("2d"); t.drawImage(img, 0, 0);
+  const d = t.getImageData(0, 0, c.width, c.height).data;
+  let x1 = c.width, y1 = c.height, x2 = 0, y2 = 0;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+    if (d[(y * c.width + x) * 4 + 3] > 10) { if (x < x1) x1 = x; if (y < y1) y1 = y; if (x > x2) x2 = x; if (y > y2) y2 = y; }
+  }
+  const w = x2 - x1 + 1, h = y2 - y1 + 1;
+  if (w <= 0 || h <= 0) return c;
+  const c2 = document.createElement("canvas"); c2.width = w; c2.height = h;
+  c2.getContext("2d").drawImage(img, x1, y1, w, h, 0, 0, w, h);
+  return c2;
+}
+function placeholder() {
+  const c = document.createElement("canvas"); c.width = 128; c.height = 64;
+  const t = c.getContext("2d");
+  t.fillStyle = "rgba(100,116,139,.35)"; t.strokeStyle = "#94a3b8"; t.lineWidth = 2;
+  t.beginPath(); t.moveTo(64,4); t.lineTo(124,32); t.lineTo(64,60); t.lineTo(4,32); t.closePath(); t.fill(); t.stroke();
+  return c;
+}
+async function loadAssets() {
+  await Promise.all(PRESETS.map(async p => {
+    let img = await loadImg(IMG + p.file);
+    if (!img && p.fb) img = await loadImg(IMG + p.fb);
+    let cv;
+    try { cv = img ? cropToCanvas(img) : placeholder(); } catch { cv = placeholder(); }
+    assets[p.name] = cv;
+    draw(); buildAssetGrid();
+  }));
+}
+
+/* ---------- 状態 ---------- */
+const T_W = 64, T_H = 32;
+const HQ = PM["HQ"];
+let user = null, isAdmin = false;
+let base = { m: [], l: [], c: null }, baseDirty = false, lastBaseSnap = null;
+let shelters = [];
+let placing = null;      // { target: 'new' | shelterId, name?, pinHash? }
+let preview = null;      // { x, y, ok }
+let cell = null;         // 選択中マス { gx, gy }
+let adminTab = "me";     // me | members | base
+let tool = "place", curAsset = "HQ", selItem = null;
+const cam = { x: 0, y: 0, z: 1 };
+let didFit = false, listening = false;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const mine = () => shelters.find(s => s.ownerUid === user?.uid);
+const editing = () => isAdmin && adminTab === "base" && !placing;
+
+let toastTimer;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2800);
+}
+function errMsg(e) {
+  if (e?.code === "permission-denied") return "権限がありません(他の人の分は変更できません / ルール未設定の可能性)";
+  return "エラー: " + (e?.code || e?.message || e);
+}
+
+/* ---------- モーダル ---------- */
+function modal(title, bodyHtml, buttons) {
+  $("mTitle").textContent = title; $("mBody").innerHTML = bodyHtml;
+  const bar = $("mBtns"); bar.innerHTML = "";
+  buttons.forEach(b => {
+    const el = document.createElement("button"); el.textContent = b.label; el.className = b.cls || "";
+    el.onclick = async () => { const r = b.fn ? await b.fn() : undefined; if (r !== false) closeModal(); };
+    bar.appendChild(el);
+  });
+  $("modal").hidden = false;
+  return $("mBody");
+}
+const closeModal = () => { $("modal").hidden = true; };
+function confirmDlg(title, msg, okLabel, cls = "dng") {
+  return new Promise(res => modal(title, esc(msg), [
+    { label: "キャンセル", fn: () => res(false) },
+    { label: okLabel, cls, fn: () => res(true) },
+  ]));
+}
+
+/* ---------- 座標変換 ---------- */
+const toS = (gx, gy) => ({ x: (gx - gy) * (T_W / 2), y: (gx + gy) * (T_H / 2) });
+function toG(sx, sy) {
+  const x = (sx - cam.x) / cam.z, y = (sy - cam.y) / cam.z;
+  const gy = (y / (T_H / 2) - x / (T_W / 2)) / 2;
+  return { x: x / (T_W / 2) + gy, y: gy };
+}
+function gameCoords(gx, gy) {
+  const c = base.c; if (!c) return null;
+  const dx = gx - c.refGx, dy = gy - c.refGy;
+  return {
+    x: Math.round(c.x0 + dx * (c.x1 - c.x0) + dy * (c.x2 - c.x0)),
+    y: Math.round(c.y0 + dx * (c.y1 - c.y0) + dy * (c.y2 - c.y0)),
+  };
+}
+const coordText = (gx, gy) => { const g = gameCoords(gx, gy); return g ? `X:${g.x} Y:${g.y}` : `マス ${gx}:${gy}`; };
+
+/* ---------- 当たり判定 ---------- */
+const overlap = (ax, ay, aw, ah, bx, by, bw, bh) => ax < bx + bw && bx < ax + aw && ay < by + ah && by < ay + bh;
+function blocked(x, y, gw, gh, ignoreShelter = null, ignoreItem = null) {
+  if (x < -20 || y < -20 || x + gw > 41 || y + gh > 41) return true;
+  for (const d of base.m) {
+    if (d.id === ignoreItem) continue;
+    const p = PM[d.a]; if (!p) continue;
+    if (overlap(x, y, gw, gh, Math.round(d.x), Math.round(d.y), p.gw, p.gh)) return true;
+  }
+  for (const s of shelters) {
+    if (s.id === ignoreShelter) continue;
+    if (overlap(x, y, gw, gh, s.gx, s.gy, HQ.gw, HQ.gh)) return true;
+  }
+  return false;
+}
+function hitBase(raw) {
+  for (let i = base.m.length - 1; i >= 0; i--) {
+    const d = base.m[i], p = PM[d.a]; if (!p) continue;
+    if (raw.x >= d.x && raw.x < d.x + p.gw && raw.y >= d.y && raw.y < d.y + p.gh) return i;
+  }
+  return -1;
+}
+
+/* ---------- 描画 ---------- */
+const cv = $("cv"), ctx = cv.getContext("2d"), wrap = $("wrap");
+let dpr = window.devicePixelRatio || 1;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  if (!w || !h) return;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+    if (cv.width > 0) { cam.x += (w - cv.width / dpr) / 2; cam.y += (h - cv.height / dpr) / 2; }
+    else { cam.x = w / 2; cam.y = h / 3; }
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  }
+  draw();
+}
+new ResizeObserver(resize).observe(wrap);
+
+function diamond(x, y, w, h, stroke, lw, fill) {
+  const pS = toS(x + w, y + h), pW = toS(x, y + h), pN = toS(x, y), pE = toS(x + w, y);
+  ctx.beginPath(); ctx.moveTo(pS.x, pS.y); ctx.lineTo(pW.x, pW.y); ctx.lineTo(pN.x, pN.y); ctx.lineTo(pE.x, pE.y); ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw / cam.z; ctx.stroke(); }
+}
+function territory(gx, gy, r) {
+  diamond(gx - r, gy - r, r * 2 + 1, r * 2 + 1, "rgba(0,122,255,.3)", 1, "rgba(0,122,255,.12)");
+}
+function sprite(name, x, y, s, off, ox, oy, alpha = 1) {
+  const A = assets[name], P = PM[name]; if (!A || !P) return;
+  const w = T_W * s, h = (A.height / A.width) * w;
+  const an = toS(x + P.gw + ox, y + P.gh + oy);
+  const pad = (P.gw === 2 && P.gh === 2 && s >= 1.5) ? 0.5 : 0;
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(A, an.x - w / 2 - pad / 2, an.y - h + off - pad / 4, w + pad, h + pad / 2);
+  ctx.globalAlpha = 1;
+}
+function badge(text, gx, gy, gw, gh, s, color) {
+  const f = 9.5 * s, p = 3.2 * s;
+  ctx.save();
+  ctx.font = `bold ${f}px system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif`;
+  const clean = text.replace(/[︀-️​-‏﻿‪-‮⁦-⁩]/g, "").trim();
+  const pos = toS(gx + gw / 2, gy + gh / 2);
+  const tw = ctx.measureText(clean).width, bw = tw + p * 2, bh = f + p;
+  ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(pos.x - bw / 2, pos.y - bh / 2, bw, bh, 2.2 * s); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(clean, pos.x - tw / 2, pos.y);
+  ctx.restore();
+}
+
+let penDrag = null;
+function draw() {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  if (!w || !h) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.save(); ctx.translate(cam.x, cam.y); ctx.scale(cam.z, cam.z);
+
+  ctx.strokeStyle = "rgba(0,0,0,.08)"; ctx.lineWidth = 1 / cam.z;
+  for (let i = -20; i <= 40; i++) {
+    let s = toS(i, -20), e = toS(i, 40); ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
+    s = toS(-20, i); e = toS(40, i); ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
+  }
+  base.m.forEach(d => {
+    if (d.a === "OP") territory(Math.round(d.x), Math.round(d.y), 5);
+    else if (d.a === "DOOM") territory(Math.round(d.x) + 1, Math.round(d.y) + 1, 6);
+  });
+  base.l.forEach(l => {
+    ctx.beginPath(); ctx.strokeStyle = "rgba(255,0,0,.6)"; ctx.lineWidth = 4 / cam.z;
+    const s = toS(l.x1, l.y1), e = toS(l.x2, l.y2); ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke();
+  });
+
+  const uid = user?.uid;
+  const list = [];
+  base.m.forEach(d => list.push({ t: "b", d, x: Math.round(d.x), y: Math.round(d.y) }));
+  shelters.forEach(s => {
+    if (placing && placing.target === s.id && preview) return; // 移動中は元の位置を隠す
+    list.push({ t: "s", s, x: s.gx, y: s.gy });
+  });
+  list.sort((a, b) => (a.x + a.y) - (b.x + b.y));
+  list.forEach(it => {
+    if (it.t === "b") {
+      const d = it.d; sprite(d.a, d.x, d.y, d.s, d.off, d.ox, d.oy);
+      if (editing() && selItem === d.id) { const p = PM[d.a]; diamond(Math.round(d.x), Math.round(d.y), p.gw, p.gh, "#007aff", 3); }
+    } else {
+      const s = it.s; sprite("HQ", s.gx, s.gy, HQ.s, HQ.o, HQ.ox, HQ.oy);
+      if (s.ownerUid === uid) diamond(s.gx, s.gy, HQ.gw, HQ.gh, "#007aff", 3);
+    }
+  });
+  list.forEach(it => {
+    if (it.t === "s") badge(it.s.name, it.s.gx, it.s.gy, HQ.gw, HQ.gh, HQ.s, it.s.ownerUid === uid ? "rgba(29,78,216,.95)" : "rgba(0,0,0,.85)");
+  });
+
+  if (placing && preview) {
+    diamond(preview.x, preview.y, HQ.gw, HQ.gh, preview.ok ? "#16a34a" : "#dc2626", 3, preview.ok ? "rgba(34,197,94,.3)" : "rgba(239,68,68,.35)");
+    sprite("HQ", preview.x, preview.y, HQ.s, HQ.o, HQ.ox, HQ.oy, 0.65);
+    const nm = placing.name || shelters.find(s => s.id === placing.target)?.name;
+    if (nm) badge(nm, preview.x, preview.y, HQ.gw, HQ.gh, HQ.s, "rgba(29,78,216,.95)");
+  }
+  if (penDrag) {
+    ctx.beginPath(); ctx.setLineDash([6 / cam.z, 3 / cam.z]); ctx.strokeStyle = "rgba(255,0,0,.8)"; ctx.lineWidth = 2 / cam.z;
+    const s = toS(penDrag.s.x, penDrag.s.y), e = toS(penDrag.c.x, penDrag.c.y);
+    ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (cell && !placing) diamond(cell.gx, cell.gy, 1, 1, "#ff3b30", 2);
+  ctx.restore();
+}
+
+function zoomAt(f, cx, cy) {
+  const nz = Math.min(Math.max(cam.z * f, 0.2), 5), r = nz / cam.z;
+  cam.x = cx - (cx - cam.x) * r; cam.y = cy - (cy - cam.y) * r; cam.z = nz; draw();
+}
+function jumpTo(gx, gy) {
+  const p = toS(gx + 0.5, gy + 0.5);
+  cam.x = wrap.clientWidth / 2 - p.x * cam.z; cam.y = wrap.clientHeight / 2 - p.y * cam.z; draw();
+}
+function fitOnce() {
+  if (didFit || !base.m.length) return;
+  didFit = true;
+  let sx = 0, sy = 0; base.m.forEach(d => { sx += d.x; sy += d.y; });
+  jumpTo(Math.round(sx / base.m.length), Math.round(sy / base.m.length));
+}
+
+/* ---------- 入力(ポインタ) ---------- */
+const ptrs = new Map();
+let gest = null, drag = null;
+const rectPt = (e) => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+const dist2 = () => { const [a, b] = [...ptrs.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; };
+
+cv.addEventListener("pointerdown", e => {
+  cv.setPointerCapture(e.pointerId);
+  const p = rectPt(e); ptrs.set(e.pointerId, p);
+  if (ptrs.size === 1) {
+    gest = { sx: p.x, sy: p.y, lx: p.x, ly: p.y, moved: false, pinch: false };
+    drag = null; startDrag(p);
+  } else if (ptrs.size === 2) {
+    const m = dist2(); gest = { ...(gest || {}), pinch: true, moved: true, d: m.d, cx: m.cx, cy: m.cy };
+    drag = null; penDrag = null;
+  }
+});
+cv.addEventListener("pointermove", e => {
+  if (!ptrs.has(e.pointerId)) return;
+  const p = rectPt(e); ptrs.set(e.pointerId, p);
+  if (ptrs.size >= 2 && gest?.pinch) {
+    const m = dist2();
+    if (gest.d > 0) zoomAt(m.d / gest.d, m.cx, m.cy);
+    cam.x += m.cx - gest.cx; cam.y += m.cy - gest.cy;
+    gest.d = m.d; gest.cx = m.cx; gest.cy = m.cy; draw(); return;
+  }
+  if (!gest || gest.pinch) return;
+  if (!gest.moved && Math.hypot(p.x - gest.sx, p.y - gest.sy) < 6) return;
+  gest.moved = true;
+  const dx = p.x - gest.lx, dy = p.y - gest.ly; gest.lx = p.x; gest.ly = p.y;
+  if (drag) moveDrag(p); else { cam.x += dx; cam.y += dy; draw(); }
+});
+function endPtr(e) {
+  if (!ptrs.has(e.pointerId)) return;
+  const p = rectPt(e); ptrs.delete(e.pointerId);
+  if (ptrs.size === 0 && gest) {
+    if (!gest.pinch) {
+      if (gest.moved) endDrag(); else onTap(p);
+    }
+    gest = null; drag = null; penDrag = null; draw();
+  }
+}
+cv.addEventListener("pointerup", endPtr);
+cv.addEventListener("pointercancel", endPtr);
+cv.addEventListener("wheel", e => {
+  e.preventDefault(); const p = rectPt(e);
+  zoomAt(e.deltaY < 0 ? 1.1 : 0.9, p.x, p.y);
+}, { passive: false });
+
+function startDrag(p) {
+  if (!editing()) return;
+  const raw = toG(p.x, p.y);
+  if (tool === "pen") {
+    const q = { x: Math.round(raw.x), y: Math.round(raw.y) };
+    drag = { type: "pen" }; penDrag = { s: q, c: q };
+  } else if (tool === "move") {
+    const i = hitBase(raw);
+    if (i >= 0) { selItem = base.m[i].id; drag = { type: "item" }; syncSliders(); draw(); }
+  }
+}
+function moveDrag(p) {
+  const raw = toG(p.x, p.y);
+  if (drag.type === "pen") { penDrag.c = { x: Math.round(raw.x), y: Math.round(raw.y) }; draw(); return; }
+  if (drag.type === "item") {
+    const d = base.m.find(m => m.id === selItem); if (!d) return;
+    const pr = PM[d.a];
+    const nx = Math.floor(raw.x) - (pr.gw - 1), ny = Math.floor(raw.y) - (pr.gh - 1);
+    if ((nx !== d.x || ny !== d.y) && !blocked(nx, ny, pr.gw, pr.gh, null, d.id)) { d.x = nx; d.y = ny; markDirty(); draw(); }
+  }
+}
+function endDrag() {
+  if (drag?.type === "pen" && penDrag && (penDrag.s.x !== penDrag.c.x || penDrag.s.y !== penDrag.c.y)) {
+    base.l.push({ x1: penDrag.s.x, y1: penDrag.s.y, x2: penDrag.c.x, y2: penDrag.c.y }); markDirty();
+  }
+}
+
+function onTap(p) {
+  const raw = toG(p.x, p.y);
+  const gx = Math.floor(raw.x), gy = Math.floor(raw.y);
+
+  if (placing) {
+    const x = gx - (HQ.gw - 1), y = gy - (HQ.gh - 1);
+    preview = { x, y, ok: !blocked(x, y, HQ.gw, HQ.gh, placing.target === "new" ? null : placing.target) };
+    cell = { gx, gy }; render(); return;
+  }
+  if (editing()) {
+    if (tool === "place") {
+      const P = PM[curAsset], x = gx - (P.gw - 1), y = gy - (P.gh - 1);
+      if (blocked(x, y, P.gw, P.gh)) { toast("他の建物と重なっています"); return; }
+      const prev = [...base.m].reverse().find(d => d.a === curAsset);
+      const item = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), x, y, a: curAsset,
+        s: prev ? prev.s : P.s, off: prev ? prev.off : P.o, ox: prev ? prev.ox : P.ox, oy: prev ? prev.oy : P.oy };
+      base.m.push(item); selItem = item.id; markDirty(); syncSliders();
+    } else if (tool === "erase") {
+      const i = hitBase(raw); if (i >= 0) { base.m.splice(i, 1); selItem = null; markDirty(); syncSliders(); }
+    } else if (tool === "lerase") {
+      const seg = (q, v, w) => {
+        const l2 = (v.x - w.x) ** 2 + (v.y - w.y) ** 2; if (!l2) return Math.hypot(q.x - v.x, q.y - v.y);
+        const t = Math.max(0, Math.min(1, ((q.x - v.x) * (w.x - v.x) + (q.y - v.y) * (w.y - v.y)) / l2));
+        return Math.hypot(q.x - (v.x + t * (w.x - v.x)), q.y - (v.y + t * (w.y - v.y)));
+      };
+      const n = base.l.length;
+      base.l = base.l.filter(l => seg(raw, { x: l.x1, y: l.y1 }, { x: l.x2, y: l.y2 }) > 0.5);
+      if (base.l.length !== n) markDirty();
+    } else if (tool === "move") {
+      const i = hitBase(raw); selItem = i >= 0 ? base.m[i].id : null; syncSliders();
+    }
+  }
+  cell = { gx, gy }; render();
+}
+
+/* ---------- 画面の出し分け ---------- */
+function render() {
+  const me = mine();
+  $("count").textContent = `${shelters.length}/${MAX_MEMBERS}`;
+  $("dirty").hidden = !baseDirty;
+  $("btnAdmin").textContent = isAdmin ? "👑 ログアウト" : "👑";
+  $("btnAdmin").title = isAdmin ? "リーダーをログアウト" : "リーダーログイン";
+
+  $("adminTabs").hidden = !isAdmin;
+  document.querySelectorAll("#adminTabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === adminTab));
+  const memberView = !isAdmin || adminTab === "me";
+  $("sNew").hidden = !(memberView && !placing && !me);
+  $("sMe").hidden = !(memberView && !placing && me);
+  $("sPlace").hidden = !placing;
+  $("sMembers").hidden = !(isAdmin && adminTab === "members" && !placing);
+  $("sBase").hidden = !(isAdmin && adminTab === "base" && !placing);
+
+  if (me) $("meTitle").textContent = `あなたの避難所: ${me.name}(${coordText(me.gx + HQ.gw - 1, me.gy + HQ.gh - 1)})${me.pinHash ? " 🔑PIN設定済み" : ""}`;
+
+  if (placing) {
+    $("btnOk").disabled = !(preview && preview.ok);
+    $("placeTitle").textContent = preview
+      ? (preview.ok ? `ここに置けます (${coordText(preview.x + HQ.gw - 1, preview.y + HQ.gh - 1)})` : "ここは他の建物と重なっています")
+      : "マップをタップして場所を選んでください";
+  }
+
+  // マス情報
+  const shown = placing && preview ? { gx: preview.x + HQ.gw - 1, gy: preview.y + HQ.gh - 1 } : cell;
+  if (shown) {
+    $("cellTxt").textContent = "📍 " + coordText(shown.gx, shown.gy);
+    $("btnCopy").hidden = !gameCoords(shown.gx, shown.gy);
+  } else { $("cellTxt").textContent = "タップしたマスの座標を表示します"; $("btnCopy").hidden = true; }
+
+  if (isAdmin && adminTab === "members") renderAdminList();
+  document.querySelectorAll("#toolRow button").forEach(b => b.classList.toggle("on", b.dataset.tool === tool));
+  draw();
+}
+function renderAdminList() {
+  const L = $("aList");
+  const arr = [...shelters].sort((a, b) => a.name.localeCompare(b.name, "ja"));
+  if (!arr.length) { L.innerHTML = '<div class="hint">まだ誰も置いていません</div>'; return; }
+  L.innerHTML = arr.map(s => `<div class="item" data-id="${esc(s.id)}">
+      <span class="nm">${esc(s.name)}</span>${s.pinHash ? '<span class="pin">PIN</span>' : ""}
+      <button class="sm" data-a="jump">表示</button><button class="sm" data-a="move">移動</button>
+      <button class="sm" data-a="pin" ${s.pinHash ? "" : "disabled"}>PIN解除</button>
+      <button class="sm dng" data-a="free">解放</button></div>`).join("");
+}
+function markDirty() { baseDirty = true; render(); }
+
+/* ---------- ベース編集UI ---------- */
+function buildAssetGrid() {
+  const g = $("aAssets"); g.innerHTML = "";
+  PRESETS.forEach(p => {
+    const el = document.createElement("div"); el.className = "as" + (p.name === curAsset ? " sel" : "");
+    try { if (assets[p.name]) el.style.backgroundImage = `url(${assets[p.name].toDataURL()})`; } catch {}
+    el.innerHTML = `<span>${esc(p.name)}</span>`;
+    el.onclick = () => { curAsset = p.name; tool = "place"; buildAssetGrid(); render(); };
+    g.appendChild(el);
+  });
+}
+function syncSliders() {
+  const d = base.m.find(m => m.id === selItem);
+  $("sSize").disabled = $("sOff").disabled = !d;
+  $("sSize").value = d ? d.s : 1; $("sOff").value = d ? d.off : 0;
+}
+$("sSize").oninput = e => { const d = base.m.find(m => m.id === selItem); if (d) { d.s = parseFloat(e.target.value); markDirty(); } };
+$("sOff").oninput = e => { const d = base.m.find(m => m.id === selItem); if (d) { d.off = parseInt(e.target.value); markDirty(); } };
+document.querySelectorAll("#toolRow button").forEach(b => b.onclick = () => { tool = b.dataset.tool; render(); });
+document.querySelectorAll("#adminTabs button").forEach(b => b.onclick = () => { adminTab = b.dataset.tab; selItem = null; syncSliders(); render(); });
+
+$("btnSave").onclick = async () => {
+  try {
+    await setDoc(doc(db, "rooms", ROOM, "base", "main"), { m: base.m, l: base.l, c: base.c || null, updatedAt: serverTimestamp() });
+    baseDirty = false; toast("ベースマップを保存しました"); render();
+  } catch (e) { toast(errMsg(e)); }
+};
+$("btnDiscard").onclick = async () => {
+  if (!baseDirty) return;
+  if (!(await confirmDlg("変更を破棄", "保存していない変更を捨てて、保存済みの状態に戻します。", "破棄する"))) return;
+  baseDirty = false; applyBase(lastBaseSnap); selItem = null; syncSliders(); render();
+};
+$("btnClear").onclick = async () => {
+  if (!(await confirmDlg("全消去", "ベースの建物と赤線をすべて消します(保存するまで確定しません)。", "消す"))) return;
+  base.m = []; base.l = []; selItem = null; syncSliders(); markDirty();
+};
+$("btnCoord").onclick = () => {
+  if (!cell) { toast("先にマップ上のマスをタップしてください"); return; }
+  const c = base.c, g = (k) => c ? c[k] : "";
+  const body = modal("基準座標の登録", `
+    <div class="hint">選んだマス(${cell.gx}:${cell.gy})のゲーム内座標を A、右隣(x+1)を B、下隣(y+1)を C として入力してください。</div>
+    <div class="row"><b class="fix">A</b><input type="number" id="cA1" placeholder="X" value="${g("x0")}"><input type="number" id="cA2" placeholder="Y" value="${g("y0")}"></div>
+    <div class="row"><b class="fix">B</b><input type="number" id="cB1" placeholder="X" value="${g("x1")}"><input type="number" id="cB2" placeholder="Y" value="${g("y1")}"></div>
+    <div class="row"><b class="fix">C</b><input type="number" id="cC1" placeholder="X" value="${g("x2")}"><input type="number" id="cC2" placeholder="Y" value="${g("y2")}"></div>`, [
+    { label: "キャンセル" },
+    { label: "登録", cls: "pri", fn: () => {
+      const v = ["cA1","cA2","cB1","cB2","cC1","cC2"].map(id => parseFloat(body.querySelector("#" + id).value));
+      if (v.some(isNaN)) { toast("すべて数字で入力してください"); return false; }
+      base.c = { refGx: cell.gx, refGy: cell.gy, x0: v[0], y0: v[1], x1: v[2], y1: v[3], x2: v[4], y2: v[5] };
+      markDirty(); toast("登録しました(保存で確定)");
+    } },
+  ]);
+};
+
+/* ---------- メンバー操作 ---------- */
+async function hashPin(pin) {
+  if (!pin) return null;
+  const data = new TextEncoder().encode(ROOM + ":" + pin);
+  if (globalThis.crypto?.subtle) {
+    const b = await crypto.subtle.digest("SHA-256", data);
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+  }
+  return "p:" + pin;
+}
+const normName = (s) => s.trim().normalize("NFKC").toLowerCase();
+
+$("btnStart").onclick = async () => {
+  const name = $("inName").value.trim(), pin = $("inPin").value;
+  if (!name) { toast("名前を入力してください"); return; }
+  if (pin && pin.length < 4) { toast("PINは4文字以上にしてください"); return; }
+  if (shelters.some(s => normName(s.name) === normName(name))) { toast("その名前はすでに使われています"); return; }
+  if (shelters.length >= MAX_MEMBERS) { toast("定員に達しています"); return; }
+  placing = { target: "new", name, pinHash: await hashPin(pin) };
+  preview = null; render();
+};
+$("btnClaim").onclick = async () => {
+  const name = $("inName").value.trim(), pin = $("inPin").value;
+  if (!name || !pin) { toast("名前とPINを入力してください"); return; }
+  const h = await hashPin(pin);
+  const s = shelters.find(x => normName(x.name) === normName(name));
+  if (!s || !s.pinHash || s.pinHash !== h) { toast("名前かPINが違います(PIN未設定の人はリーダーに解放を頼んでください)"); return; }
+  try {
+    await updateDoc(doc(db, "rooms", ROOM, "shelters", s.id), { ownerUid: user.uid, updatedAt: serverTimestamp() });
+    toast("復帰しました!"); jumpTo(s.gx, s.gy);
+  } catch (e) { toast(errMsg(e)); }
+};
+$("btnMove").onclick = () => {
+  const me = mine(); if (!me) return;
+  placing = { target: me.id }; preview = { x: me.gx, y: me.gy, ok: true }; jumpTo(me.gx, me.gy); render();
+};
+$("btnDel").onclick = async () => {
+  const me = mine(); if (!me) return;
+  if (!(await confirmDlg("避難所を削除", "あなたの避難所を削除します。あとで置き直せます。", "削除する"))) return;
+  try { await deleteDoc(doc(db, "rooms", ROOM, "shelters", me.id)); toast("削除しました"); } catch (e) { toast(errMsg(e)); }
+};
+$("btnPin").onclick = () => {
+  const me = mine(); if (!me) return;
+  const body = modal("PINの設定", `<div class="hint">機種変更・ブラウザ変更のときに、名前+PINで自分の枠に戻れます。空欄で登録するとPINを解除します。</div>
+    <input type="password" id="mIn" maxlength="30" placeholder="新しいPIN(4文字以上)">`, [
+    { label: "キャンセル" },
+    { label: "設定", cls: "pri", fn: async () => {
+      const v = body.querySelector("#mIn").value;
+      if (v && v.length < 4) { toast("PINは4文字以上にしてください"); return false; }
+      try {
+        await updateDoc(doc(db, "rooms", ROOM, "shelters", me.id), { pinHash: await hashPin(v), updatedAt: serverTimestamp() });
+        toast(v ? "PINを設定しました" : "PINを解除しました");
+      } catch (e) { toast(errMsg(e)); return false; }
+    } },
+  ]);
+};
+$("btnCancelPlace").onclick = () => { placing = null; preview = null; render(); };
+$("btnOk").onclick = async () => {
+  if (!placing || !preview?.ok) return;
+  const t = placing;
+  try {
+    if (t.target === "new") {
+      await setDoc(doc(db, "rooms", ROOM, "shelters", user.uid), {
+        ownerUid: user.uid, name: t.name, gx: preview.x, gy: preview.y, pinHash: t.pinHash ?? null, updatedAt: serverTimestamp(),
+      });
+      $("inName").value = ""; $("inPin").value = "";
+    } else {
+      await updateDoc(doc(db, "rooms", ROOM, "shelters", t.target), { gx: preview.x, gy: preview.y, updatedAt: serverTimestamp() });
+    }
+    toast("決定しました!"); placing = null; preview = null; render();
+  } catch (e) { toast(errMsg(e)); }
+};
+
+$("aList").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const id = b.closest(".item").dataset.id, s = shelters.find(x => x.id === id); if (!s) return;
+  const ref = doc(db, "rooms", ROOM, "shelters", id);
+  try {
+    if (b.dataset.a === "jump") jumpTo(s.gx, s.gy);
+    else if (b.dataset.a === "move") { placing = { target: id }; preview = { x: s.gx, y: s.gy, ok: true }; jumpTo(s.gx, s.gy); render(); }
+    else if (b.dataset.a === "pin") { await updateDoc(ref, { pinHash: null, updatedAt: serverTimestamp() }); toast(`${s.name} のPINを解除しました`); }
+    else if (b.dataset.a === "free" && await confirmDlg("枠を解放", `「${s.name}」の避難所を削除します。本人が置き直せるようになります。`, "解放する")) {
+      await deleteDoc(ref); toast("解放しました");
+    }
+  } catch (err) { toast(errMsg(err)); }
+});
+
+$("btnRoster").onclick = () => {
+  const arr = [...shelters].sort((a, b) => a.name.localeCompare(b.name, "ja"));
+  const body = modal(`名簿 (${arr.length}/${MAX_MEMBERS})`,
+    arr.length ? `<div class="list" style="max-height:50dvh">${arr.map(s => `<div class="item" data-id="${esc(s.id)}">
+      <span class="nm">${esc(s.name)}</span><span class="hint">${esc(coordText(s.gx + HQ.gw - 1, s.gy + HQ.gh - 1))}</span>
+      <button class="sm pri">表示</button></div>`).join("")}</div>` : '<div class="hint">まだ誰も置いていません</div>',
+    [{ label: "閉じる" }]);
+  body.onclick = e => {
+    const b = e.target.closest("button"); if (!b) return;
+    const s = shelters.find(x => x.id === b.closest(".item").dataset.id); if (!s) return;
+    closeModal(); cell = { gx: s.gx + HQ.gw - 1, gy: s.gy + HQ.gh - 1 }; jumpTo(s.gx, s.gy); render();
+  };
+};
+
+$("btnCopy").onclick = () => {
+  const shown = placing && preview ? { gx: preview.x + HQ.gw - 1, gy: preview.y + HQ.gh - 1 } : cell;
+  const g = shown && gameCoords(shown.gx, shown.gy); if (!g) return;
+  const txt = `${g.x}:${g.y}`;
+  const fb = () => { const t = document.createElement("textarea"); t.value = txt; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); };
+  (navigator.clipboard?.writeText(txt) || Promise.reject()).catch(fb).finally(() => toast(`座標 ${txt} をコピーしました`));
+};
+
+/* ---------- リーダーログイン ---------- */
+$("btnAdmin").onclick = async () => {
+  try {
+    if (isAdmin) { await signOut(auth); toast("ログアウトしました"); return; }
+    const r = await signInWithPopup(auth, new GoogleAuthProvider());
+    if (r.user.email !== ADMIN_EMAIL) { await signOut(auth); toast("このアカウントはリーダーではありません"); }
+  } catch (e) {
+    if (e.code === "auth/unauthorized-domain") toast("このドメインをFirebaseの承認済みドメインに追加してください");
+    else if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") toast(errMsg(e));
+  }
+};
+
+/* ---------- Firebase 接続 ---------- */
+function applyBase(snap) {
+  base = snap ? { m: snap.m || [], l: snap.l || [], c: snap.c || null } : { m: [], l: [], c: null };
+}
+function startListening() {
+  if (listening) return; listening = true;
+  const onErr = (e) => toast(e.code === "permission-denied" ? "読み込めません。Firestoreのルールを設定してください" : errMsg(e));
+  onSnapshot(doc(db, "rooms", ROOM, "base", "main"), s => {
+    lastBaseSnap = s.exists() ? s.data() : null;
+    if (!baseDirty) { applyBase(lastBaseSnap); fitOnce(); render(); }
+  }, onErr);
+  onSnapshot(collection(db, "rooms", ROOM, "shelters"), s => {
+    shelters = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (placing && placing.target !== "new" && !shelters.some(x => x.id === placing.target)) { placing = null; preview = null; }
+    render();
+  }, onErr);
+}
+onAuthStateChanged(auth, u => {
+  if (!u) { signInAnonymously(auth).catch(e => toast("ログインに失敗: " + (e.code || e.message))); return; }
+  user = u;
+  const was = isAdmin;
+  isAdmin = !u.isAnonymous && u.email === ADMIN_EMAIL && u.emailVerified;
+  if (!isAdmin) { adminTab = "me"; tool = "place"; selItem = null; }
+  if (isAdmin && !was) toast("リーダーとしてログインしました");
+  placing = null; preview = null;
+  startListening(); render();
+});
+window.addEventListener("beforeunload", e => { if (baseDirty) { e.preventDefault(); e.returnValue = ""; } });
+
+buildAssetGrid(); syncSliders(); loadAssets(); resize(); render();
+</script>
+</body>
+</html>
