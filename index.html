@@ -439,6 +439,9 @@ function draw() {
     if (it.t === "s") badge(it.s.name, it.s.gx, it.s.gy, HQ.gw, HQ.gh, HQ.s, it.s.ownerUid === uid ? "rgba(29,78,216,.95)" : "rgba(0,0,0,.85)");
   });
 
+  // ベース編集中は、各建物が実際に使っているマス(重なり判定に使う範囲)を細い線で表示する
+  if (editing()) base.m.forEach(d => { const p = PM[d.a]; if (p) diamond(Math.round(d.x), Math.round(d.y), p.gw, p.gh, "rgba(0,122,255,.8)", 1.5, "rgba(0,122,255,.08)"); });
+
   if (placing && preview) {
     diamond(preview.x, preview.y, HQ.gw, HQ.gh, preview.ok ? "#16a34a" : "#dc2626", 3, preview.ok ? "rgba(34,197,94,.3)" : "rgba(239,68,68,.35)");
     sprite("HQ", preview.x, preview.y, HQ.s, HQ.o, HQ.ox, HQ.oy, 0.65);
