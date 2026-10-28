@@ -55,6 +55,11 @@
   .sl input { flex: 1; }
   #modal { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; touch-action: auto; }
   #mBox { width: 100%; max-width: 380px; background: #fff; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; max-height: 85dvh; overflow-y: auto; }
+  .landing #wrap, .landing #panel, .landing #btnRoster, .landing #count { display: none !important; }
+  #landing { flex: 1; overflow-y: auto; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 14px; touch-action: auto; }
+  #landing > div { width: 100%; max-width: 420px; }
+  #landing .card { background: #fff; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  #landing a { color: #007aff; word-break: break-all; }
   #mTitle { font-weight: 800; font-size: 15px; }
   #mBody { display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.6; }
   #mBtns { display: flex; gap: 8px; }
@@ -73,6 +78,21 @@
 
 <div id="wrap"><canvas id="cv"></canvas></div>
 <div id="toast" hidden></div>
+
+<div id="landing" hidden>
+  <div class="card">
+    <div class="title">🏠 避難所配置マップ</div>
+    <div class="hint">このページだけでは、マップは表示されません。リーダーから共有された<b>部屋のURL</b>を開いてください。</div>
+  </div>
+  <div class="card" id="lAdmin" hidden>
+    <div class="title">👑 部屋を作る(リーダー用)</div>
+    <input type="text" id="inRoom" maxlength="20" placeholder="部屋の名前(英数字。例: ogs)">
+    <div class="hint">名前の後ろにランダムな文字が付きます。URLを知っている人だけが入れます。</div>
+    <button class="pri" id="btnMakeRoom">部屋を作ってベース編集へ</button>
+    <div id="lRooms" class="col"></div>
+  </div>
+</div>
+
 
 <div id="panel">
   <div id="cellbar">
@@ -180,7 +200,9 @@ const MAX_MEMBERS = 100;
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const ROOM = (new URLSearchParams(location.search).get("room") || "main").replace(/[\/\s]/g, "_");
+const ROOM = (new URLSearchParams(location.search).get("room") || "").replace(/[\/\s]/g, "_") || null;
+if (!ROOM) document.body.classList.add("landing");
+let roomMissing = false; // リーダーがまだ作っていない部屋
 
 /* ---------- 素材 ---------- */
 const IMG = "https://raw.githubusercontent.com/orihina0193/map-tool/main/img/";
@@ -674,6 +696,7 @@ const normName = (s) => s.trim().normalize("NFKC").toLowerCase();
 
 $("btnStart").onclick = async () => {
   const name = $("inName").value.trim(), pin = $("inPin").value;
+  if (roomMissing) { toast("この部屋はまだ作られていません"); return; }
   if (!name) { toast("名前を入力してください"); return; }
   if (pin && pin.length < 4) { toast("PINは4文字以上にしてください"); return; }
   if (shelters.some(s => normName(s.name) === normName(name))) { toast("その名前はすでに使われています"); return; }
@@ -790,6 +813,8 @@ function startListening() {
   const onErr = (e) => toast(e.code === "permission-denied" ? "読み込めません。Firestoreのルールを設定してください" : errMsg(e));
   onSnapshot(doc(db, "rooms", ROOM, "base", "main"), s => {
     lastBaseSnap = s.exists() ? s.data() : null;
+    roomMissing = !s.exists();
+    if (roomMissing && !isAdmin) toast("この部屋はまだ作られていません。URLを確認してください");
     if (!baseDirty) { applyBase(lastBaseSnap); fitOnce(); render(); }
   }, onErr);
   onSnapshot(collection(db, "rooms", ROOM, "shelters"), s => {
@@ -806,11 +831,36 @@ onAuthStateChanged(auth, u => {
   if (!isAdmin) { adminTab = "me"; tool = "place"; selItem = null; }
   if (isAdmin && !was) toast("リーダーとしてログインしました");
   placing = null; preview = null;
-  startListening(); render();
+  if (ROOM) startListening();
+  render(); renderLanding();
 });
+
+/* ---------- 部屋を作る(リーダー専用・部屋名なしのURLで表示) ---------- */
+const savedRooms = () => { try { return JSON.parse(localStorage.getItem("shelterRooms") || "[]"); } catch { return []; } };
+function renderLanding() {
+  $("landing").hidden = !!ROOM;
+  if (ROOM) return;
+  $("lAdmin").hidden = !isAdmin;
+  const base0 = location.origin + location.pathname;
+  $("lRooms").innerHTML = savedRooms().map(r => {
+    const u = `${base0}?room=${encodeURIComponent(r)}`;
+    return `<div class="hint">${esc(r)}<br><a href="${esc(u)}">${esc(u)}</a></div>`;
+  }).join("");
+}
+$("btnMakeRoom").onclick = async () => {
+  if (!isAdmin) return;
+  const raw = $("inRoom").value.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const rnd = Array.from(crypto.getRandomValues(new Uint8Array(8)), b => (b % 36).toString(36)).join("");
+  const name = (raw ? raw + "-" : "") + rnd;
+  try {
+    await setDoc(doc(db, "rooms", name, "base", "main"), { m: [], l: [], c: null, updatedAt: serverTimestamp() });
+    try { localStorage.setItem("shelterRooms", JSON.stringify([name, ...savedRooms()].slice(0, 20))); } catch {}
+    location.href = `${location.pathname}?room=${encodeURIComponent(name)}`;
+  } catch (e) { toast(errMsg(e)); }
+};
 window.addEventListener("beforeunload", e => { if (baseDirty) { e.preventDefault(); e.returnValue = ""; } });
 
-buildAssetGrid(); syncSliders(); loadAssets(); resize(); render();
+buildAssetGrid(); syncSliders(); loadAssets(); resize(); render(); renderLanding();
 </script>
 </body>
 </html>
