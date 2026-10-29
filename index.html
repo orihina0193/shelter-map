@@ -172,6 +172,10 @@
   <div id="sMembers" class="col" hidden>
     <div class="title">メンバー管理</div>
     <div class="hint">解放=その人の避難所を削除(置き直せる) / PIN解除=位置はそのままPINだけ消す / 移動=代わりに動かす</div>
+    <div class="row">
+      <input type="text" id="inProxy" maxlength="20" placeholder="代理で追加する人の名前">
+      <button class="pri fix" id="btnProxy">場所を決める</button>
+    </div>
     <div id="aList" class="list"></div>
   </div>
 
@@ -744,6 +748,16 @@ $("btnStart").onclick = async () => {
   placing = { target: "new", name, pinHash: await hashPin(pin) };
   preview = null; render();
 };
+$("btnProxy").onclick = () => {
+  const name = $("inProxy").value.trim();
+  if (!isAdmin) return;
+  if (roomMissing) { toast("この部屋はまだ作られていません"); return; }
+  if (!name) { toast("名前を入力してください"); return; }
+  if (shelters.some(s => normName(s.name) === normName(name))) { toast("その名前はすでに使われています"); return; }
+  if (shelters.length >= MAX_MEMBERS) { toast("定員に達しています"); return; }
+  placing = { target: "new", name, proxy: true };
+  preview = null; render();
+};
 $("btnClaim").onclick = async () => {
   const name = $("inName").value.trim(), pin = $("inPin").value;
   if (!name || !pin) { toast("名前とPINを入力してください"); return; }
@@ -788,7 +802,14 @@ $("btnOk").onclick = async () => {
     preview.ok = false; render(); toast("先に他の人が置きました。別の場所を選んでください"); return;
   }
   try {
-    if (t.target === "new") {
+    if (t.target === "new" && t.proxy) {
+      // 代理登録: 持ち主なし(ownerUid が空)。本人が戻るときはリーダーが解放して置き直してもらう
+      const id = "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      await setDoc(doc(db, "rooms", ROOM, "shelters", id), {
+        ownerUid: "", name: t.name, gx: preview.x, gy: preview.y, pinHash: null, updatedAt: serverTimestamp(),
+      });
+      $("inProxy").value = "";
+    } else if (t.target === "new") {
       await setDoc(doc(db, "rooms", ROOM, "shelters", user.uid), {
         ownerUid: user.uid, name: t.name, gx: preview.x, gy: preview.y, pinHash: t.pinHash ?? null, updatedAt: serverTimestamp(),
       });
