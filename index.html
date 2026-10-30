@@ -78,7 +78,7 @@
   #aAssets .as.sel { border: 2px solid var(--ac); box-shadow: 0 0 0 3px var(--ac-ring); background-color: #fff; }
   #aAssets .as span { position: absolute; right: 2px; bottom: 2px; font-size: 8px; background: rgba(30,37,64,.7); color: #fff; padding: 0 4px; border-radius: 4px; }
   .sl { display: flex; align-items: center; gap: 8px; }
-  .sl label { width: 34px; font-size: 11px; font-weight: 700; color: var(--sub); }
+  .sl label { width: 44px; white-space: nowrap; font-size: 11px; font-weight: 700; color: var(--sub); }
   .sl input { flex: 1; }
   #modal { position: fixed; inset: 0; background: rgba(20,25,60,.55); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; touch-action: auto; }
   #mBox { width: 100%; max-width: 380px; background: #fff; border-radius: 22px; padding: 20px; display: flex; flex-direction: column; gap: 12px; max-height: 85dvh; overflow-y: auto; box-shadow: 0 20px 50px rgba(20,25,60,.4); }
@@ -194,6 +194,8 @@
     <div class="sl"><label>サイズ</label><input type="range" id="sSize" min="0.1" max="5" step="0.05"></div>
     <div class="sl"><label>上下</label><input type="range" id="sOff" min="-100" max="100" step="1"></div>
     <div class="sl"><label>左右</label><input type="range" id="sLR" min="-2" max="2" step="0.05"></div>
+    <div class="sl"><label>↘右下</label><input type="range" id="sDR" min="-3" max="3" step="0.05"></div>
+    <div class="sl"><label>↙左下</label><input type="range" id="sDL" min="-3" max="3" step="0.05"></div>
     <div class="row">
       <button id="btnCoord">座標登録</button>
       <button class="dng" id="btnClear">全消去</button>
@@ -696,10 +698,21 @@ function buildAssetGrid() {
 }
 function syncSliders() {
   const d = base.m.find(m => m.id === selItem);
-  $("sSize").disabled = $("sOff").disabled = $("sLR").disabled = !d;
+  $("sSize").disabled = $("sOff").disabled = $("sLR").disabled = $("sDR").disabled = $("sDL").disabled = !d;
   $("sSize").value = d ? d.s : 1; $("sOff").value = d ? d.off : 0;
-  $("sLR").value = d ? +(d.ox - PM[d.a].ox).toFixed(2) : 0;
+  const dx = d ? d.ox - PM[d.a].ox : 0, dy = d ? d.oy - PM[d.a].oy : 0;
+  $("sLR").value = +((dx - dy) / 2).toFixed(2); // 画面の横方向の成分
+  $("sDR").value = +dx.toFixed(2); $("sDL").value = +dy.toFixed(2);
 }
+// 右下 / 左下: 等角グリッドの軸(x=右下, y=左下)に沿って絵だけをずらす。1.0 でちょうど1マス分
+$("sDR").oninput = e => {
+  const d = base.m.find(m => m.id === selItem); if (!d) return;
+  d.ox = +(PM[d.a].ox + parseFloat(e.target.value)).toFixed(2); markDirty();
+};
+$("sDL").oninput = e => {
+  const d = base.m.find(m => m.id === selItem); if (!d) return;
+  d.oy = +(PM[d.a].oy + parseFloat(e.target.value)).toFixed(2); markDirty();
+};
 // 左右: 画面の横方向に動かす(等角グリッドではxを増やしyを減らすと右へ動く)
 $("sLR").oninput = e => {
   const d = base.m.find(m => m.id === selItem); if (!d) return;
