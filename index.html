@@ -248,12 +248,11 @@ const PRESETS = [
   ["RSS","RSS.png",1.6,-4,2,2,-0.2,-0.3],
   ["ST","ST.png",1.6,0,2,2,-0.2,-0.2],
   ["OP","OP.png",0.8,0,1,1,-0.1,-0.1],
-  ["tile","tile.png",1.6,1,2,2,-0.1,-0.2,"tile_stone_se.png"],
   ["ROCK2","ROCK2.png",0.75,-5,1,1,0,0],
-  ["岩(南東)","tile_stone_se.png",2.0,0,2,2,0,0],
-  ["岩(南西)","tile_stone_sw.png",2.0,0,2,2,0,0],
-  ["岩(北西)","tile_stone_nw.png",2.0,0,2,2,0,0],
-  ["岩(北東)","tile_stone_ne.png",2.0,0,2,2,0,0],
+  ["MUD(南東)","tile_stone_se.png",2.0,0,2,2,0,0],
+  ["MUD(南西)","tile_stone_sw.png",2.0,0,2,2,0,0],
+  ["MUD(北西)","tile_stone_nw.png",2.0,0,2,2,0,0],
+  ["MUD(北東)","tile_stone_ne.png",2.0,0,2,2,0,0],
 ].map(([name,file,s,o,gw,gh,ox,oy,fb]) => ({name,file,s,o,gw,gh,ox,oy,fb}));
 const PM = Object.fromEntries(PRESETS.map(p => [p.name, p]));
 const assets = {}; // name -> canvas
@@ -428,7 +427,7 @@ function planBlock(name, x, y, gw, gh, color) {
   ctx.font = `bold ${gw > 1 ? 13 : 9}px "Zen Maru Gothic", system-ui, sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillStyle = name === "tile" ? "#2b3358" : "#fff";
-  ctx.fillText(name.startsWith("岩") || name === "ROCK2" ? "岩" : name, c.x, c.y);
+  ctx.fillText(name.startsWith("MUD") ? "MUD" : name === "ROCK2" ? "岩" : name, c.x, c.y);
   ctx.restore();
 }
 function badge(text, gx, gy, gw, gh, s, color) {
