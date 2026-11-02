@@ -344,7 +344,7 @@ function confirmDlg(title, msg, okLabel, cls = "dng") {
 
 /* ---------- 座標変換 ---------- */
 // 平面表示モード: 向きはそのまま(斜め)で、建物の絵を色つきのマスに置き換える
-let planView = false;
+let planView = true; // 開いたときは平面表示。ヘッダーのボタンで斜め(絵つき)に切り替える
 const toS = (gx, gy) => ({ x: (gx - gy) * (T_W / 2), y: (gx + gy) * (T_H / 2) });
 function toG(sx, sy) {
   const x = (sx - cam.x) / cam.z, y = (sy - cam.y) / cam.z;
