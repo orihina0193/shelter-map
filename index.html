@@ -652,7 +652,17 @@ function onTap(p) {
       const i = hitBase(raw); selItem = i >= 0 ? base.m[i].id : null; syncSliders();
     }
   }
-  cell = { gx, gy }; render();
+  cell = southCell(gx, gy) || { gx, gy }; render();
+}
+// 2マス以上の建物(4マスのアセットや避難所)のどこをタップしても、南側のマスを選んだことにする
+function southCell(gx, gy) {
+  const hit = (x, y, gw, gh) => (gw > 1 || gh > 1) && gx >= x && gx < x + gw && gy >= y && gy < y + gh ? { gx: x + gw - 1, gy: y + gh - 1 } : null;
+  for (const s of shelters) { const r = hit(s.gx, s.gy, HQ.gw, HQ.gh); if (r) return r; }
+  for (let i = base.m.length - 1; i >= 0; i--) {
+    const d = base.m[i], p = PM[d.a]; if (!p) continue;
+    const r = hit(Math.round(d.x), Math.round(d.y), p.gw, p.gh); if (r) return r;
+  }
+  return null;
 }
 
 /* ---------- 画面の出し分け ---------- */
