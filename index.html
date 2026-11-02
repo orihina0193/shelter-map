@@ -77,10 +77,13 @@
   #aAssets .as { width: 56px; height: 56px; border: 1.5px solid var(--line); border-radius: 12px; background: #f8f9fe center/contain no-repeat; position: relative; cursor: pointer; }
   #aAssets .as.sel { border: 2px solid var(--ac); box-shadow: 0 0 0 3px var(--ac-ring); background-color: #fff; }
   #aAssets .as span { position: absolute; right: 2px; bottom: 2px; font-size: 8px; background: rgba(30,37,64,.7); color: #fff; padding: 0 4px; border-radius: 4px; }
+  .chip { display: inline-block; min-width: 76px; text-align: center; font-weight: 900; font-size: 13px; color: #fff; padding: 9px 8px; border-radius: 12px; white-space: nowrap; }
+  .chip.a, b.cA { background: #f0506e; } .chip.b, b.cB { background: #12b886; } .chip.c, b.cC { background: #f59f00; }
+  b.cA, b.cB, b.cC { color: #fff; padding: 1px 7px; border-radius: 6px; }
   .sl { display: flex; align-items: center; gap: 8px; }
   .sl label { width: 44px; white-space: nowrap; font-size: 11px; font-weight: 700; color: var(--sub); }
   .sl input { flex: 1; }
-  #modal { position: fixed; inset: 0; background: rgba(20,25,60,.55); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; touch-action: auto; }
+  #modal { position: fixed; inset: 0; background: rgba(20,25,60,.4); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; touch-action: auto; }
   #mBox { width: 100%; max-width: 380px; background: #fff; border-radius: 22px; padding: 20px; display: flex; flex-direction: column; gap: 12px; max-height: 85dvh; overflow-y: auto; box-shadow: 0 20px 50px rgba(20,25,60,.4); }
   .landing #wrap, .landing #panel, .landing #btnRoster, .landing #btnView,.landing #count { display: none !important; }
   #landing { flex: 1; overflow-y: auto; padding: 28px 16px; display: flex; flex-direction: column; align-items: center; gap: 14px; touch-action: auto; background: radial-gradient(ellipse at 50% 0%, #fbfcff, var(--bg) 70%); }
@@ -132,6 +135,7 @@
     <button data-tab="me">自分の避難所</button>
     <button data-tab="members">メンバー管理</button>
     <button data-tab="base">ベース編集</button>
+    <button data-tab="coord">座標登録</button>
   </div>
 
   <!-- まだ置いていない人 -->
@@ -197,12 +201,20 @@
     <div class="sl"><label>↘右下</label><input type="range" id="sDR" min="-3" max="3" step="0.05"></div>
     <div class="sl"><label>↙左下</label><input type="range" id="sDL" min="-3" max="3" step="0.05"></div>
     <div class="row">
-      <button id="btnCoord">座標登録</button>
       <button class="dng" id="btnClear">全消去</button>
       <button id="btnDiscard">破棄</button>
       <button class="pri" id="btnSave">保存</button>
     </div>
-    <div class="hint">「座標登録」: 先にマップ上でゲーム内座標が分かるマスをタップして選んでから押してください。</div>
+  </div>
+
+  <!-- リーダー: 座標登録 -->
+  <div id="sCoord" class="col" hidden>
+    <div class="hint"><b>座標登録</b>: マップをタップして <b class="cA">A</b> を選び(座標が分かるマス)、右下のとなりが <b class="cB">B</b>、左下のとなりが <b class="cC">C</b>。ゲーム内座標を入れてください。</div>
+    <div class="row"><span class="chip a fix" id="chipA">A</span><input type="number" id="cA1" placeholder="X"><input type="number" id="cA2" placeholder="Y"></div>
+    <div class="row"><span class="chip b fix" id="chipB">B</span><input type="number" id="cB1" placeholder="X"><input type="number" id="cB2" placeholder="Y"></div>
+    <div class="row"><span class="chip c fix" id="chipC">C</span><input type="number" id="cC1" placeholder="X"><input type="number" id="cC2" placeholder="Y"></div>
+    <button class="pri" id="btnCoordSave">登録して保存</button>
+    <div class="hint">ベース編集で保存していない変更も、いっしょに保存されます。</div>
   </div>
 </div>
 
@@ -302,7 +314,7 @@ let shelters = [];
 let placing = null;      // { target: 'new' | shelterId, name?, pinHash? }
 let preview = null;      // { x, y, ok }
 let cell = null;         // 選択中マス { gx, gy }
-let adminTab = "me";     // me | members | base
+let adminTab = "me";     // me | members | base | coord
 let tool = "place", curAsset = "HQ", selItem = null;
 const cam = { x: 0, y: 0, z: 1 };
 let didFit = false, listening = false;
@@ -506,6 +518,14 @@ function draw() {
     ctx.moveTo(s.x, s.y); ctx.lineTo(e.x, e.y); ctx.stroke(); ctx.setLineDash([]);
   }
   if (cell && !placing) diamond(cell.gx, cell.gy, 1, 1, "#ff5d7a", 2);
+  if (cell && !placing && isAdmin && adminTab === "coord") { // 座標登録: A / B / C のマスに色と文字を付ける
+    [["A", 0, 0, "#f0506e"], ["B", 1, 0, "#12b886"], ["C", 0, 1, "#f59f00"]].forEach(([l, dx, dy, col]) => {
+      diamond(cell.gx + dx, cell.gy + dy, 1, 1, col, 3, col + "88");
+      const c = toS(cell.gx + dx + 0.5, cell.gy + dy + 0.5);
+      ctx.save(); ctx.font = `900 18px "Zen Maru Gothic", system-ui, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.lineWidth = 4; ctx.strokeStyle = col; ctx.lineJoin = "round"; ctx.strokeText(l, c.x, c.y); ctx.fillStyle = "#fff"; ctx.fillText(l, c.x, c.y); ctx.restore();
+    });
+  }
   ctx.restore();
 }
 
@@ -652,6 +672,12 @@ function render() {
   $("sPlace").hidden = !placing;
   $("sMembers").hidden = !(isAdmin && adminTab === "members" && !placing);
   $("sBase").hidden = !(isAdmin && adminTab === "base" && !placing);
+  $("sCoord").hidden = !(isAdmin && adminTab === "coord" && !placing);
+  if (cell) { // 座標登録の A/B/C が、今どのマスかを表示
+    $("chipA").textContent = `A  ${cell.gx}:${cell.gy}`;
+    $("chipB").textContent = `B  ${cell.gx + 1}:${cell.gy}`;
+    $("chipC").textContent = `C  ${cell.gx}:${cell.gy + 1}`;
+  } else { $("chipA").textContent = "A"; $("chipB").textContent = "B"; $("chipC").textContent = "C"; }
 
   if (me) $("meTitle").textContent = `あなたの避難所: ${me.name}(${coordText(me.gx + HQ.gw - 1, me.gy + HQ.gh - 1)})${me.pinHash ? " 🔑PIN設定済み" : ""}`;
 
@@ -722,7 +748,15 @@ $("sLR").oninput = e => {
 $("sSize").oninput = e => { const d = base.m.find(m => m.id === selItem); if (d) { d.s = parseFloat(e.target.value); markDirty(); } };
 $("sOff").oninput = e => { const d = base.m.find(m => m.id === selItem); if (d) { d.off = parseInt(e.target.value); markDirty(); } };
 document.querySelectorAll("#toolRow button").forEach(b => b.onclick = () => { tool = b.dataset.tool; render(); });
-document.querySelectorAll("#adminTabs button").forEach(b => b.onclick = () => { adminTab = b.dataset.tab; selItem = null; syncSliders(); render(); });
+document.querySelectorAll("#adminTabs button").forEach(b => b.onclick = () => {
+  adminTab = b.dataset.tab; selItem = null; syncSliders();
+  if (adminTab === "coord" && base.c) { // 登録済みなら、基準マスと入力済みの座標を呼び出す
+    const c = base.c; cell = { gx: c.refGx, gy: c.refGy };
+    [c.x0, c.y0, c.x1, c.y1, c.x2, c.y2].forEach((v, i) => { $(["cA1", "cA2", "cB1", "cB2", "cC1", "cC2"][i]).value = v; });
+    jumpTo(c.refGx, c.refGy);
+  }
+  render();
+});
 
 $("btnSave").onclick = async () => {
   try {
@@ -739,22 +773,12 @@ $("btnClear").onclick = async () => {
   if (!(await confirmDlg("全消去", "ベースの建物と赤線をすべて消します(保存するまで確定しません)。", "消す"))) return;
   base.m = []; base.l = []; selItem = null; syncSliders(); markDirty();
 };
-$("btnCoord").onclick = () => {
-  if (!cell) { toast("先にマップ上のマスをタップしてください"); return; }
-  const c = base.c, g = (k) => c ? c[k] : "";
-  const body = modal("基準座標の登録", `
-    <div class="hint">選んだマス(${cell.gx}:${cell.gy})のゲーム内座標を A、右隣(x+1)を B、下隣(y+1)を C として入力してください。</div>
-    <div class="row"><b class="fix">A</b><input type="number" id="cA1" placeholder="X" value="${g("x0")}"><input type="number" id="cA2" placeholder="Y" value="${g("y0")}"></div>
-    <div class="row"><b class="fix">B</b><input type="number" id="cB1" placeholder="X" value="${g("x1")}"><input type="number" id="cB2" placeholder="Y" value="${g("y1")}"></div>
-    <div class="row"><b class="fix">C</b><input type="number" id="cC1" placeholder="X" value="${g("x2")}"><input type="number" id="cC2" placeholder="Y" value="${g("y2")}"></div>`, [
-    { label: "キャンセル" },
-    { label: "登録", cls: "pri", fn: () => {
-      const v = ["cA1","cA2","cB1","cB2","cC1","cC2"].map(id => parseFloat(body.querySelector("#" + id).value));
-      if (v.some(isNaN)) { toast("すべて数字で入力してください"); return false; }
-      base.c = { refGx: cell.gx, refGy: cell.gy, x0: v[0], y0: v[1], x1: v[2], y1: v[3], x2: v[4], y2: v[5] };
-      markDirty(); toast("登録しました(保存で確定)");
-    } },
-  ]);
+$("btnCoordSave").onclick = async () => {
+  if (!cell) { toast("先にマップをタップして、基準のマス(A)を選んでください"); return; }
+  const v = ["cA1", "cA2", "cB1", "cB2", "cC1", "cC2"].map(id => parseFloat($(id).value));
+  if (v.some(isNaN)) { toast("A・B・Cの座標をすべて数字で入力してください"); return; }
+  base.c = { refGx: cell.gx, refGy: cell.gy, x0: v[0], y0: v[1], x1: v[2], y1: v[3], x2: v[4], y2: v[5] };
+  await $("btnSave").onclick(); // 保存(成功すると「保存しました」と出る)
 };
 
 /* ---------- メンバー操作 ---------- */
