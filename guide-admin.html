@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shelter Map – Admin Guide / 管理者用ガイド</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root { --ac:#5468ff; --ac2:#7b5cff; --soft:#eef0ff; --ink:#1e2540; --sub:#6b7391; --line:#e3e7f3; --bg:#eef2fb; --ok:#12b886; --dng:#f0506e; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); line-height:1.8; font-size:15px;
+    font-family:"Zen Maru Gothic", system-ui, -apple-system, "Hiragino Maru Gothic ProN", "Meiryo", sans-serif; }
+  html[lang=ja] [data-l=en], html[lang=en] [data-l=ja] { display:none !important; }
+  header { background:linear-gradient(120deg,#2b3a8f,#5468ff 55%,#8a5cff); color:#fff; padding:22px 16px 26px; }
+  .wrap { max-width:760px; margin:0 auto; }
+  header .wrap { display:flex; align-items:flex-start; gap:12px; }
+  header h1 { margin:0; font-size:22px; font-weight:900; flex:1; line-height:1.4; }
+  header p { margin:6px 0 0; opacity:.9; font-size:13px; }
+  #lang { flex:none; background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.4); border-radius:12px; padding:8px 14px; font:inherit; font-weight:700; cursor:pointer; }
+  main { padding:16px; }
+  section { background:#fff; border:1px solid var(--line); border-radius:18px; padding:18px 18px 14px; margin:0 auto 14px; max-width:760px; box-shadow:0 6px 20px rgba(40,55,120,.08); }
+  h2 { margin:0 0 8px; font-size:17px; font-weight:900; }
+  h2 .n { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,var(--ac),var(--ac2)); color:#fff; font-size:13px; margin-right:8px; }
+  h3 { margin:14px 0 4px; font-size:15px; font-weight:900; color:#3a47b8; }
+  ol, ul { margin:6px 0; padding-left:22px; }
+  li { margin:4px 0; }
+  b.k { background:var(--soft); color:#3a47b8; border-radius:6px; padding:1px 7px; white-space:nowrap; font-weight:700; }
+  b.cA, b.cB, b.cC { color:#fff; padding:1px 7px; border-radius:6px; }
+  b.cA { background:#f0506e; } b.cB { background:#12b886; } b.cC { background:#f59f00; }
+  .note { background:#fff8e6; border:1px solid #ffe3a3; border-radius:12px; padding:9px 12px; font-size:13.5px; margin:10px 0 4px; }
+  .tip { background:var(--soft); border:1px solid #dfe3ff; border-radius:12px; padding:9px 12px; font-size:13.5px; margin:10px 0 4px; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:8px 0; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:#f6f7ff; white-space:nowrap; }
+  .tw { overflow-x:auto; }
+  footer { text-align:center; color:var(--sub); font-size:12px; padding:6px 16px 28px; }
+  @media print { header { background:#2b3a8f !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; } #lang { display:none; } section { box-shadow:none; break-inside:avoid; } }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div>
+    <h1><span data-l="ja">👑 避難所配置マップ ― 使い方(管理者用)</span><span data-l="en">👑 Shelter Placement Map ― Admin Guide</span></h1>
+    <p><span data-l="ja">作成者とギルマス向け。ベースマップの作り方、メンバー管理、座標登録の説明です。</span><span data-l="en">For the Creator and the Guild Master: building the base map, managing members, and registering coordinates.</span></p>
+  </div>
+  <button id="lang" type="button">EN</button>
+</div></header>
+
+<main>
+<section>
+  <h2><span class="n">1</span><span data-l="ja">役割とログイン</span><span data-l="en">Roles and logging in</span></h2>
+  <div class="tw"><table>
+    <tr><th></th>
+      <th><span data-l="ja">作成者</span><span data-l="en">Creator</span></th>
+      <th><span data-l="ja">ギルマス</span><span data-l="en">Guild Master</span></th>
+      <th><span data-l="ja">メンバー</span><span data-l="en">Member</span></th></tr>
+    <tr><td><span data-l="ja">ログイン方法</span><span data-l="en">Sign-in</span></td>
+      <td><span data-l="ja">Googleログイン(決まったアカウントだけ)</span><span data-l="en">Google sign-in (one specific account)</span></td>
+      <td><span data-l="ja">合言葉</span><span data-l="en">Passphrase</span></td>
+      <td><span data-l="ja">不要(URLを開くだけ)</span><span data-l="en">None (just open the URL)</span></td></tr>
+    <tr><td><span data-l="ja">ベース編集・座標登録・代理登録・解放</span><span data-l="en">Base edit, coordinates, proxy, release</span></td><td>✅</td><td>✅</td><td>❌</td></tr>
+    <tr><td><span data-l="ja">部屋を作る・合言葉の設定・ギルマスを外す</span><span data-l="en">Create rooms, set passphrase, remove a Guild Master</span></td><td>✅</td><td>❌</td><td>❌</td></tr>
+    <tr><td><span data-l="ja">自分のHQを置く</span><span data-l="en">Place own HQ</span></td><td>✅</td><td>✅</td><td>✅</td></tr>
+  </table></div>
+  <h3><span data-l="ja">ログインのしかた</span><span data-l="en">How to log in</span></h3>
+  <ol>
+    <li data-l="ja">部屋のURLを開き、右上の <b class="k">👑</b> を押します。</li>
+    <li data-l="en">Open the room URL and press <b class="k">👑</b> at the top right.</li>
+    <li data-l="ja"><b>作成者</b>: <b class="k">Googleでログイン</b> を押し、決まったアカウントで入ります。</li>
+    <li data-l="en"><b>Creator</b>: press <b class="k">Sign in with Google</b> and use the designated account.</li>
+    <li data-l="ja"><b>ギルマス</b>: 作成者から聞いた合言葉を入れて <b class="k">ギルマスで入る</b>。呼び名(任意)は、作成者の一覧に表示されます。</li>
+    <li data-l="en"><b>Guild Master</b>: type the passphrase you got from the Creator and press <b class="k">Enter as Guild Master</b>. The display name (optional) appears in the Creator's list.</li>
+    <li data-l="ja">ログアウトは、同じボタン(<b class="k">👑 ログアウト</b>)です。ギルマスはログアウトすると、次に入るとき合言葉がもう一度必要です。</li>
+    <li data-l="en">Log out with the same button (<b class="k">👑 Log out</b>). A Guild Master who logs out needs the passphrase again next time.</li>
+  </ol>
+  <div class="tip" data-l="ja">ログインすると、パネルの上に4つのタブが出ます: 自分の避難所 / メンバー管理 / ベース編集 / 座標登録。言語は、右上の <b>EN / 日本語</b> ボタンで切り替えます。</div>
+  <div class="tip" data-l="en">After logging in, four tabs appear in the panel: My shelter / Members / Base edit / Coordinates. Switch the language with the <b>EN / 日本語</b> button at the top right.</div>
+</section>
+
+<section>
+  <h2><span class="n">2</span><span data-l="ja">部屋を作って、URLを配る(作成者)</span><span data-l="en">Create a room and share the URL (Creator)</span></h2>
+  <ol>
+    <li data-l="ja">部屋の名前のないURL(例: …/shelter-map/)を開き、作成者でログインします。</li>
+    <li data-l="en">Open the URL without a room name (e.g. …/shelter-map/) and log in as Creator.</li>
+    <li data-l="ja">「部屋を作る」に、部屋の名前(英数字)を入れて <b class="k">部屋を作ってベース編集へ</b>。名前の後ろにランダムな文字が付きます。</li>
+    <li data-l="en">Under "Create a room", type a room name (letters/numbers) and press <b class="k">Create room &amp; edit base</b>. Random characters are added after the name.</li>
+    <li data-l="ja">開いた画面のURL(?room=…付き)を、メンバーとギルマスに配ります。このURLを知っている人だけが入れます。</li>
+    <li data-l="en">Share the URL of the page that opens (the one with ?room=…) with members and the Guild Master. Only people who know this URL can enter.</li>
+  </ol>
+  <div class="note" data-l="ja">作った部屋のURLは、そのブラウザの「部屋を作る」画面の下に一覧で残ります(別のブラウザには残りません)。URLは控えておいてください。</div>
+  <div class="note" data-l="en">Rooms you created are listed under "Create a room" in that browser only (not in other browsers). Keep a copy of each URL.</div>
+</section>
+
+<section>
+  <h2><span class="n">3</span><span data-l="ja">ベースマップを作る(ベース編集タブ)</span><span data-l="en">Build the base map (Base edit tab)</span></h2>
+  <p data-l="ja">ベースマップは、全員に共通の「背景」です(DOOM、MED、MUDなどの建物と、赤い線)。メンバーのHQは、この上に置かれます。</p>
+  <p data-l="en">The base map is the shared background for everyone (DOOM, MED, MUD and other buildings, plus red lines). Members' HQs are placed on top of it.</p>
+  <h3><span data-l="ja">道具</span><span data-l="en">Tools</span></h3>
+  <ul>
+    <li data-l="ja"><b class="k">配置</b>: 下の一覧から建物を選び、マップをタップして置きます。タップしたマスが、建物の一番南のマスになります。</li>
+    <li data-l="en"><b class="k">Place</b>: pick a building from the palette and tap the map. The tapped tile becomes the building's southernmost tile.</li>
+    <li data-l="ja"><b class="k">移動</b>: 建物をタップして選び、ドラッグで動かします。</li>
+    <li data-l="en"><b class="k">Move</b>: tap a building to select it, drag to move it.</li>
+    <li data-l="ja"><b class="k">建物消</b>: 建物をタップして消します。</li>
+    <li data-l="en"><b class="k">Del bldg</b>: tap a building to delete it.</li>
+    <li data-l="ja"><b class="k">線</b>: ドラッグして赤い線を引きます(格子の交点にそろいます)。</li>
+    <li data-l="en"><b class="k">Line</b>: drag to draw a red line (snaps to grid points).</li>
+    <li data-l="ja"><b class="k">線消</b>: 線の近くをタップして消します。</li>
+    <li data-l="en"><b class="k">Del line</b>: tap near a line to delete it.</li>
+  </ul>
+  <h3><span data-l="ja">建物の絵の微調整(スライダー)</span><span data-l="en">Fine-tuning the artwork (sliders)</span></h3>
+  <p data-l="ja">建物を選ぶと、スライダーが使えます。これは<b>絵だけ</b>を動かすもので、建物が使うマス(重なり判定)は変わりません。</p>
+  <p data-l="en">Select a building to use the sliders. They move <b>only the artwork</b>; the tiles the building occupies (overlap check) do not change.</p>
+  <ul>
+    <li data-l="ja"><b class="k">サイズ</b>: 絵の大きさ。 <b class="k">上下</b>: 絵を上下に。 <b class="k">左右</b>: 画面の横方向に。</li>
+    <li data-l="en"><b class="k">Size</b>: artwork size. <b class="k">Up/Down</b>: vertical. <b class="k">Left/Right</b>: screen-horizontal.</li>
+    <li data-l="ja"><b class="k">↘右下</b> / <b class="k">↙左下</b>: マスの格子の向きに沿って動かします。1.0でちょうど1マス分です。</li>
+    <li data-l="en"><b class="k">↘ DR</b> / <b class="k">↙ DL</b>: move along the tile grid axes. 1.0 is exactly one tile.</li>
+  </ul>
+  <p data-l="ja">同じ建物を続けて置くと、前に置いたものと同じ絵の位置・サイズで置かれます。</p>
+  <p data-l="en">When you place the same building again, it reuses the artwork position and size of the previous one.</p>
+  <h3><span data-l="ja">MUD(泥地)について</span><span data-l="en">About MUD</span></h3>
+  <ul>
+    <li data-l="ja"><b>MUD(右上)</b> と <b>MUD(左上)</b> は、起点マスから右上、または左上に2マスぶんの、つなぎ目のない泥地です。広い泥地は、この2種類を並べて作るのがおすすめです。</li>
+    <li data-l="en"><b>MUD (2 tiles ↗)</b> and <b>MUD (2 tiles ↖)</b> cover two tiles from the origin tile toward the upper right or upper left, and tile seamlessly. They are the recommended way to build large mud areas.</li>
+    <li data-l="ja">MUD(南東/南西/北西/北東)は、古い4マスの絵です。すでに置いたものを見えなくしないために、残してあります。</li>
+    <li data-l="en">MUD (SE/SW/NW/NE) are the old 2×2 images, kept so that already-placed ones do not disappear.</li>
+  </ul>
+  <h3><span data-l="ja">保存・破棄・全消去</span><span data-l="en">Save, discard, clear all</span></h3>
+  <ul>
+    <li data-l="ja">変更すると、上に <b class="k">未保存</b> と出ます。<b class="k">保存</b> を押すまで、ほかの人には見えません。</li>
+    <li data-l="en">After a change, <b class="k">Unsaved</b> appears at the top. Others can't see it until you press <b class="k">Save</b>.</li>
+    <li data-l="ja"><b class="k">破棄</b>: 保存していない変更を捨てて、保存済みの状態に戻します。 <b class="k">全消去</b>: 建物と赤線をすべて消します(保存するまで確定しません)。</li>
+    <li data-l="en"><b class="k">Discard</b>: throw away unsaved changes and go back to the saved version. <b class="k">Clear all</b>: remove every building and red line (not final until you save).</li>
+    <li data-l="ja">青い影は、OP(5マス)とDOOM(6マス)の影響範囲の目安です。</li>
+    <li data-l="en">The blue shading around OP (5 tiles) and DOOM (6 tiles) shows their area of influence.</li>
+  </ul>
+  <h3><span data-l="ja">作成者とギルマスが同時に編集したとき</span><span data-l="en">When the Creator and the Guild Master edit at the same time</span></h3>
+  <p data-l="ja">ベースマップは1つのデータなので、2人が同時に編集すると、片方の変更が消えるおそれがあります。それを防ぐため、保存のときに「他の人が先に保存していないか」を確認します。</p>
+  <p data-l="en">The base map is a single piece of data, so if two people edit at once, one person's changes could be lost. To prevent that, saving first checks whether someone else saved before you.</p>
+  <ul>
+    <li data-l="ja">編集中に、ほかの人が保存すると、お知らせが出ます。</li>
+    <li data-l="en">If someone else saves while you are editing, a notice appears.</li>
+    <li data-l="ja">そのまま保存しようとすると「先に更新されています」と出て、<b>保存しません</b>。<b class="k">読み込む</b> で最新の内容に切り替える(自分の未保存の変更は消えます)か、<b class="k">キャンセル</b> で編集を続けるかを選びます。</li>
+    <li data-l="en">If you try to save anyway, "Updated by someone else" appears and <b>nothing is saved</b>. Choose <b class="k">Load</b> to switch to the latest version (your unsaved changes are lost) or <b class="k">Cancel</b> to keep editing.</li>
+  </ul>
+  <div class="tip" data-l="ja">いちばん安全なのは、「いま編集しているのは誰か」を決めておくことです(例: 編集前にチャットで声をかける)。</div>
+  <div class="tip" data-l="en">The safest approach is to agree on who is editing (for example, say so in chat before you start).</div>
+</section>
+
+<section>
+  <h2><span class="n">4</span><span data-l="ja">ゲームの座標を登録する(座標登録タブ)</span><span data-l="en">Register the in-game coordinates (Coordinates tab)</span></h2>
+  <p data-l="ja">マップのマスと、ゲーム内の座標(X:Y)を対応づけます。登録すると、マスをタップしたときにゲームの座標が出て、コピーもできます。</p>
+  <p data-l="en">This links map tiles to in-game coordinates (X:Y). After registering, tapping a tile shows the game coordinates and lets you copy them.</p>
+  <ol>
+    <li data-l="ja"><b class="k">座標登録</b> タブを開きます。</li>
+    <li data-l="en">Open the <b class="k">Coordinates</b> tab.</li>
+    <li data-l="ja">ゲーム内の座標が分かるマスを、マップでタップします。これが <b class="cA">A</b> です。</li>
+    <li data-l="en">Tap a tile on the map whose in-game coordinates you know. This is <b class="cA">A</b>.</li>
+    <li data-l="ja">地図には、Aの右下のとなりが <b class="cB">B</b>、左下のとなりが <b class="cC">C</b> として色つきで表示されます。</li>
+    <li data-l="en">The map highlights the tile down-right of A as <b class="cB">B</b> and the tile down-left of A as <b class="cC">C</b>.</li>
+    <li data-l="ja">A・B・Cそれぞれのゲーム内座標(X, Y)を、入力欄に入れます。ゲームでその3マスの座標を確かめてから入れてください。</li>
+    <li data-l="en">Enter the in-game coordinates (X, Y) of A, B and C. Check those three tiles in the game first.</li>
+    <li data-l="ja"><b class="k">登録して保存</b> を押します。ベース編集の未保存の変更も、いっしょに保存されます。</li>
+    <li data-l="en">Press <b class="k">Register &amp; save</b>. Unsaved base edits are saved together.</li>
+  </ol>
+  <div class="tip" data-l="ja">あとでタブを開き直すと、登録済みの基準マスと座標が呼び出されます。直したいときは、そのまま書き換えて、もう一度保存します。</div>
+  <div class="tip" data-l="en">When you reopen the tab later, the registered reference tile and coordinates are loaded. To correct them, edit the values and save again.</div>
+</section>
+
+<section>
+  <h2><span class="n">5</span><span data-l="ja">メンバー管理</span><span data-l="en">Managing members</span></h2>
+  <h3><span data-l="ja">代理で置く(休暇中の人・選ばなかった人)</span><span data-l="en">Place on someone's behalf (away or undecided members)</span></h3>
+  <ol>
+    <li data-l="ja"><b class="k">メンバー管理</b> タブの「代理で追加する人の名前」に、その人の名前を入れます。</li>
+    <li data-l="en">In the <b class="k">Members</b> tab, type the person's name in "Name of the person to add as proxy".</li>
+    <li data-l="ja"><b class="k">場所を決める</b> → マップをタップ → <b class="k">ここに決定</b>。</li>
+    <li data-l="en">Press <b class="k">Choose a spot</b>, tap the map, then <b class="k">Place here</b>.</li>
+  </ol>
+  <p data-l="ja">代理で置いた避難所には持ち主がいません。本人が自分で管理したいときは、作成者(またはギルマス)が <b class="k">解放</b> して、本人にもう一度置いてもらいます。</p>
+  <p data-l="en">A proxy shelter has no owner. If the person wants to manage it themselves, the Creator (or Guild Master) presses <b class="k">Release</b> and the person places it again.</p>
+  <h3><span data-l="ja">一覧のボタン</span><span data-l="en">Buttons in the list</span></h3>
+  <ul>
+    <li data-l="ja"><b class="k">表示</b>: その人の場所へ移動。</li>
+    <li data-l="en"><b class="k">Show</b>: jump to that person's spot.</li>
+    <li data-l="ja"><b class="k">移動</b>: 代わりに場所を動かします(タップ → 決定)。</li>
+    <li data-l="en"><b class="k">Move</b>: move it for them (tap, then Place here).</li>
+    <li data-l="ja"><b class="k">PIN解除</b>: 位置はそのままで、PINだけ消します。</li>
+    <li data-l="en"><b class="k">Clear PIN</b>: keep the position, remove only the PIN.</li>
+    <li data-l="ja"><b class="k">解放</b>: その人の避難所を削除します。本人が置き直せるようになります。PINを忘れた人や、機種変更で戻れなくなった人は、これで助けます。</li>
+    <li data-l="en"><b class="k">Release</b>: delete that person's shelter so they can place it again. Use it for people who forgot their PIN or lost access after changing device.</li>
+  </ul>
+  <div class="note" data-l="ja">名前は、全角・半角や大文字・小文字の違いを無視して、重複できないようになっています。定員は100人です。</div>
+  <div class="note" data-l="en">Names must be unique, ignoring full/half-width and upper/lower case. The maximum is 100 members.</div>
+</section>
+
+<section>
+  <h2><span class="n">6</span><span data-l="ja">ギルマスを管理者にする(作成者)</span><span data-l="en">Making someone a Guild Master (Creator)</span></h2>
+  <ol>
+    <li data-l="ja"><b class="k">メンバー管理</b> タブの下にある「👑 ギルマス(共同管理者)の設定」を開きます(作成者にだけ表示されます)。</li>
+    <li data-l="en">In the <b class="k">Members</b> tab, open "👑 Guild Master (co-admin) settings" at the bottom (visible to the Creator only).</li>
+    <li data-l="ja"><b class="k">合言葉を設定・変更</b> を押し、合言葉を入れます。半角英数字・記号で12文字以上がおすすめです(最低8文字、スペースなし)。</li>
+    <li data-l="en">Press <b class="k">Set / change passphrase</b> and type a passphrase: letters, numbers and symbols, 12+ characters recommended (8 minimum, no spaces).</li>
+    <li data-l="ja">合言葉をギルマスだけに伝えます。ギルマスは、部屋のURLを開いて <b class="k">👑</b> → 合言葉 → <b class="k">ギルマスで入る</b>。</li>
+    <li data-l="en">Tell the passphrase only to the Guild Master. They open the room URL, press <b class="k">👑</b>, enter the passphrase and press <b class="k">Enter as Guild Master</b>.</li>
+    <li data-l="ja">入った人は、同じ場所の一覧に出ます。やめてもらうときは <b class="k">外す</b>。</li>
+    <li data-l="en">Everyone who entered appears in the same list. Press <b class="k">Remove</b> to take away their access.</li>
+  </ol>
+  <div class="note" data-l="ja">合言葉は部屋ごとに設定します。合言葉を変えても、すでに入った人はそのままです。外したい人は <b>外す</b> を押してください。合言葉は短いと当てられるおそれがあるので、長くしてください。</div>
+  <div class="note" data-l="en">The passphrase is set per room. Changing it does not affect people who already entered; use <b>Remove</b> for them. Short passphrases can be guessed, so make it long.</div>
+</section>
+
+<section>
+  <h2><span class="n">7</span><span data-l="ja">困ったとき・覚えておくこと</span><span data-l="en">Troubleshooting and good to know</span></h2>
+  <ul>
+    <li data-l="ja"><b>変更が反映されない・表示が古い</b>: 保存したか確認し、ページを再読み込みします(Ctrl+Shift+R)。</li>
+    <li data-l="en"><b>Changes don't show / page looks old</b>: check that you saved, then reload (Ctrl+Shift+R).</li>
+    <li data-l="ja"><b>「権限がありません」と出る</b>: ログインが切れた、またはギルマスから外された可能性があります。もう一度 <b class="k">👑</b> からログインしてください。</li>
+    <li data-l="en"><b>"Permission denied"</b>: you may have been logged out or removed as Guild Master. Log in again with <b class="k">👑</b>.</li>
+    <li data-l="ja"><b>「合言葉が違います」と出る</b>: 合言葉を入れ直します。作成者が合言葉をまだ設定していない場合も、同じ表示になります。</li>
+    <li data-l="en"><b>"Wrong passphrase"</b>: re-enter it. The same message appears if the Creator hasn't set a passphrase yet.</li>
+    <li data-l="ja">建物の名前を変えたり、素材を削除したりすると、すでに置いた建物が見えなくなることがあります。素材の変更は、作成者に相談してください。</li>
+    <li data-l="en">Renaming or removing building assets can make already-placed buildings invisible. Ask the Creator before changing assets.</li>
+    <li data-l="ja">部屋ごとにデータは別です。別の部屋に切り替えるときは、その部屋のURLを開きます。</li>
+    <li data-l="en">Each room has its own data. To use another room, open that room's URL.</li>
+  </ul>
+</section>
+</main>
+<footer><span data-l="ja">避難所配置マップ 管理者用ガイド</span><span data-l="en">Shelter Placement Map – Admin Guide</span></footer>
+
+<script>
+(function () {
+  var l;
+  try { l = localStorage.getItem("lang"); } catch (e) {}
+  if (l !== "ja" && l !== "en") l = /^ja/i.test(navigator.language || "") ? "ja" : "en";
+  var b = document.getElementById("lang");
+  function set(v) {
+    l = v; document.documentElement.lang = v; b.textContent = v === "en" ? "日本語" : "EN";
+    document.title = v === "en" ? "Shelter Map – Admin Guide" : "避難所配置マップ – 管理者用ガイド";
+    try { localStorage.setItem("lang", v); } catch (e) {}
+  }
+  b.onclick = function () { set(l === "en" ? "ja" : "en"); };
+  set(l);
+})();
+</script>
+</body>
+</html>
