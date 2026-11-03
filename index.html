@@ -182,6 +182,14 @@
       <button class="pri fix" id="btnProxy">場所を決める</button>
     </div>
     <div id="aList" class="list"></div>
+    <details id="sLeaderOnly" hidden>
+      <summary>👑 ギルマス(共同管理者)の設定</summary>
+      <div class="col" style="margin-top:8px">
+        <div class="hint">合言葉を知っている人は、「👑」→「ギルマスで入る」で、ベース編集・メンバー管理・座標登録ができます。合言葉はギルマスにだけ伝えてください。変えても、すでに入った人はそのままです。やめてもらうときは「外す」を押します。</div>
+        <button id="btnSecret">合言葉を設定・変更</button>
+        <div id="coList" class="list"></div>
+      </div>
+    </details>
   </div>
 
   <!-- リーダー: ベース編集 -->
@@ -230,7 +238,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithPopup, GoogleAuthProvider, signOut }
   from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
-import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, deleteDoc, serverTimestamp }
+import { getFirestore, doc, collection, onSnapshot, setDoc, updateDoc, deleteDoc, runTransaction, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -309,7 +317,10 @@ async function loadAssets() {
 const T_W = 64, T_H = 32;
 const HQ = PM["HQ"];
 let user = null, isAdmin = false;
+let isLeader = false, isCo = false; // リーダー(Google) / ギルマス(合言葉で入った共同管理者)。isAdmin はどちらか
+let coList = [];
 let base = { m: [], l: [], c: null }, baseDirty = false, lastBaseSnap = null;
+let editRev = 0, saving = false; // 編集を始めたときのベースの版 / 保存中
 let shelters = [];
 let placing = null;      // { target: 'new' | shelterId, name?, pinHash? }
 let preview = null;      // { x, y, ok }
@@ -672,7 +683,7 @@ function render() {
   $("dirty").hidden = !baseDirty;
   $("btnView").textContent = planView ? "斜め" : "平面";
   $("btnAdmin").textContent = isAdmin ? "👑 ログアウト" : "👑";
-  $("btnAdmin").title = isAdmin ? "リーダーをログアウト" : "リーダーログイン";
+  $("btnAdmin").title = isAdmin ? "管理者をログアウト" : "管理者ログイン";
 
   $("adminTabs").hidden = !isAdmin;
   document.querySelectorAll("#adminTabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === adminTab));
@@ -706,6 +717,8 @@ function render() {
   } else { $("cellTxt").textContent = "タップしたマスの座標を表示します"; $("btnCopy").hidden = true; }
 
   if (isAdmin && adminTab === "members") renderAdminList();
+  $("sLeaderOnly").hidden = !isLeader;
+  if (isLeader && adminTab === "members") renderCoList();
   document.querySelectorAll("#toolRow button").forEach(b => b.classList.toggle("on", b.dataset.tool === tool));
   draw();
 }
@@ -719,7 +732,12 @@ function renderAdminList() {
       <button class="sm" data-a="pin" ${s.pinHash ? "" : "disabled"}>PIN解除</button>
       <button class="sm dng" data-a="free">解放</button></div>`).join("");
 }
-function markDirty() { baseDirty = true; render(); }
+function markDirty() { if (!baseDirty) editRev = lastBaseSnap?.rev || 0; baseDirty = true; render(); }
+function renderCoList() {
+  $("coList").innerHTML = coList.length
+    ? coList.map(c => `<div class="item" data-id="${esc(c.id)}"><span class="nm">${esc(c.n || "ギルマス")}</span><button class="sm dng">外す</button></div>`).join("")
+    : '<div class="hint">まだ誰も入っていません</div>';
+}
 
 /* ---------- ベース編集UI ---------- */
 function buildAssetGrid() {
@@ -769,10 +787,25 @@ document.querySelectorAll("#adminTabs button").forEach(b => b.onclick = () => {
 });
 
 $("btnSave").onclick = async () => {
+  // 編集を始めたときの版と、いまサーバーにある版が同じときだけ保存する(ギルマスとの上書き防止)
+  const expect = baseDirty ? editRev : (lastBaseSnap?.rev || 0);
+  const ref = doc(db, "rooms", ROOM, "base", "main");
+  saving = true;
   try {
-    await setDoc(doc(db, "rooms", ROOM, "base", "main"), { m: base.m, l: base.l, c: base.c || null, updatedAt: serverTimestamp() });
+    await runTransaction(db, async tx => {
+      const cur = await tx.get(ref);
+      const rev = cur.exists() ? (cur.data().rev || 0) : 0;
+      if (rev !== expect) throw Object.assign(new Error("stale"), { code: "stale" });
+      tx.set(ref, { m: base.m, l: base.l, c: base.c || null, rev: rev + 1, updatedAt: serverTimestamp() });
+    });
     baseDirty = false; toast("ベースマップを保存しました"); render();
-  } catch (e) { toast(errMsg(e)); }
+  } catch (e) {
+    if (e.code === "stale") {
+      if (await confirmDlg("先に更新されています", "ほかの人(または別の端末)が先にベースマップを保存しました。そのまま保存すると相手の変更が消えるため、保存しませんでした。最新の内容を読み込みますか?(あなたの未保存の変更は破棄されます)", "読み込む", "pri")) {
+        baseDirty = false; applyBase(lastBaseSnap); selItem = null; syncSliders(); render();
+      }
+    } else toast(errMsg(e));
+  } finally { saving = false; }
 };
 $("btnDiscard").onclick = async () => {
   if (!baseDirty) return;
@@ -926,16 +959,62 @@ $("btnCopy").onclick = () => {
 };
 
 /* ---------- リーダーログイン ---------- */
-$("btnAdmin").onclick = async () => {
+async function sha256hex(s) {
+  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+async function googleLogin() {
   try {
-    if (isAdmin) { await signOut(auth); toast("ログアウトしました"); return; }
     const r = await signInWithPopup(auth, new GoogleAuthProvider());
     if (r.user.email !== ADMIN_EMAIL) { await signOut(auth); toast("このアカウントはリーダーではありません"); }
   } catch (e) {
     if (e.code === "auth/unauthorized-domain") toast("このドメインをFirebaseの承認済みドメインに追加してください");
     else if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") toast(errMsg(e));
   }
+}
+$("btnAdmin").onclick = async () => {
+  if (isAdmin) {
+    try {
+      if (isCo) await deleteDoc(doc(db, "rooms", ROOM, "admins", user.uid)); // ギルマスは名簿から自分を外す
+      else await signOut(auth);
+      toast("ログアウトしました");
+    } catch (e) { toast(errMsg(e)); }
+    return;
+  }
+  if (!ROOM) { googleLogin(); return; }
+  const body = modal("管理者ログイン", `<div class="hint"><b>ギルマス</b>の方は、リーダーから聞いた合言葉を入れてください。リーダーは下の「Googleでログイン」です。</div>
+    <input type="password" id="mIn" maxlength="64" placeholder="合言葉">
+    <input type="text" id="mName" maxlength="20" placeholder="呼び名(任意。例: ギルマス)">`, [
+    { label: "キャンセル" },
+    { label: "ギルマスで入る", cls: "pri", fn: async () => {
+      const k = body.querySelector("#mIn").value, n = body.querySelector("#mName").value.trim() || "ギルマス";
+      if (!k) { toast("合言葉を入力してください"); return false; }
+      try { await setDoc(doc(db, "rooms", ROOM, "admins", user.uid), { k, n }); }
+      catch (e) { toast(e.code === "permission-denied" ? "合言葉が違います(または、まだ設定されていません)" : errMsg(e)); return false; }
+    } },
+    { label: "Googleでログイン", fn: () => { googleLogin(); } },
+  ]);
 };
+$("btnSecret").onclick = () => {
+  const body = modal("ギルマス用の合言葉", `<div class="hint">半角英数字・記号で、12文字以上がおすすめです(最低8文字・スペースなし)。短いと当てられるおそれがあります。ギルマスにだけ伝えてください。</div>
+    <input type="text" id="mIn" maxlength="64" placeholder="合言葉">`, [
+    { label: "キャンセル" },
+    { label: "設定", cls: "pri", fn: async () => {
+      const v = body.querySelector("#mIn").value;
+      if (!/^[\x21-\x7e]{8,64}$/.test(v)) { toast("半角英数字・記号で8文字以上(スペースなし)にしてください"); return false; }
+      try {
+        await setDoc(doc(db, "rooms", ROOM, "secret", "admin"), { h: await sha256hex(ROOM + ":" + v), updatedAt: serverTimestamp() });
+        toast("合言葉を設定しました");
+      } catch (e) { toast(errMsg(e)); return false; }
+    } },
+  ]);
+};
+$("coList").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const id = b.closest(".item").dataset.id, c = coList.find(x => x.id === id); if (!c) return;
+  if (!(await confirmDlg("ギルマスを外す", `「${c.n || "ギルマス"}」の管理者権限をなくします。`, "外す"))) return;
+  try { await deleteDoc(doc(db, "rooms", ROOM, "admins", id)); toast("外しました"); } catch (err) { toast(errMsg(err)); }
+});
 
 /* ---------- Firebase 接続 ---------- */
 function applyBase(snap) {
@@ -949,6 +1028,7 @@ function startListening() {
     roomMissing = !s.exists();
     if (roomMissing && !isAdmin) toast("この部屋はまだ作られていません。URLを確認してください");
     if (!baseDirty) { applyBase(lastBaseSnap); fitOnce(); render(); }
+    else if (!saving && (lastBaseSnap?.rev || 0) !== editRev) toast("ほかの人がベースマップを保存しました。保存しようとすると読み込み直しになります");
   }, onErr);
   onSnapshot(collection(db, "rooms", ROOM, "shelters"), s => {
     shelters = s.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -962,16 +1042,36 @@ function startListening() {
     render();
   }, onErr);
 }
+function updateAdmin() {
+  const was = isAdmin;
+  isAdmin = isLeader || isCo;
+  if (!isAdmin) { adminTab = "me"; tool = "place"; selItem = null; }
+  if (isAdmin && !was) toast(isLeader ? "リーダーとしてログインしました" : "ギルマスとして入りました");
+  if (was && !isAdmin) { placing = null; preview = null; }
+  render(); renderLanding();
+}
+// ギルマス判定: この端末のuidが rooms/{room}/admins にいるか / リーダーは全員分の名簿も見る
+let coKey = "", coUnsub = null, listKey = "", listUnsub = null;
+function watchCo() {
+  const k1 = ROOM && user ? ROOM + "/" + user.uid : "";
+  if (k1 !== coKey) {
+    coKey = k1; coUnsub?.(); coUnsub = null; isCo = false;
+    if (k1 && user.isAnonymous) coUnsub = onSnapshot(doc(db, "rooms", ROOM, "admins", user.uid), s => { isCo = s.exists(); updateAdmin(); }, () => {});
+  }
+  const k2 = ROOM && isLeader ? ROOM : "";
+  if (k2 !== listKey) {
+    listKey = k2; listUnsub?.(); listUnsub = null; coList = [];
+    if (k2) listUnsub = onSnapshot(collection(db, "rooms", ROOM, "admins"), s => { coList = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
+  }
+}
 onAuthStateChanged(auth, u => {
   if (!u) { signInAnonymously(auth).catch(e => toast("ログインに失敗: " + (e.code || e.message))); return; }
   user = u;
-  const was = isAdmin;
-  isAdmin = !u.isAnonymous && u.email === ADMIN_EMAIL && u.emailVerified;
-  if (!isAdmin) { adminTab = "me"; tool = "place"; selItem = null; }
-  if (isAdmin && !was) toast("リーダーとしてログインしました");
+  isLeader = !u.isAnonymous && u.email === ADMIN_EMAIL && u.emailVerified;
   placing = null; preview = null;
+  watchCo();
   if (ROOM) startListening();
-  render(); renderLanding();
+  updateAdmin();
 });
 
 /* ---------- 部屋を作る(リーダー専用・部屋名なしのURLで表示) ---------- */
@@ -979,7 +1079,7 @@ const savedRooms = () => { try { return JSON.parse(localStorage.getItem("shelter
 function renderLanding() {
   $("landing").hidden = !!ROOM;
   if (ROOM) return;
-  $("lAdmin").hidden = !isAdmin;
+  $("lAdmin").hidden = !isLeader;
   const base0 = location.origin + location.pathname;
   $("lRooms").innerHTML = savedRooms().map(r => {
     const u = `${base0}?room=${encodeURIComponent(r)}`;
@@ -987,12 +1087,12 @@ function renderLanding() {
   }).join("");
 }
 $("btnMakeRoom").onclick = async () => {
-  if (!isAdmin) return;
+  if (!isLeader) return;
   const raw = $("inRoom").value.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
   const rnd = Array.from(crypto.getRandomValues(new Uint8Array(8)), b => (b % 36).toString(36)).join("");
   const name = (raw ? raw + "-" : "") + rnd;
   try {
-    await setDoc(doc(db, "rooms", name, "base", "main"), { m: [], l: [], c: null, updatedAt: serverTimestamp() });
+    await setDoc(doc(db, "rooms", name, "base", "main"), { m: [], l: [], c: null, rev: 0, updatedAt: serverTimestamp() });
     try { localStorage.setItem("shelterRooms", JSON.stringify([name, ...savedRooms()].slice(0, 20))); } catch {}
     location.href = `${location.pathname}?room=${encodeURIComponent(name)}`;
   } catch (e) { toast(errMsg(e)); }
