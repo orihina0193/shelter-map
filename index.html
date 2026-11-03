@@ -94,6 +94,16 @@
   #mBody { display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.7; }
   #mBtns { display: flex; gap: 8px; }
   #mBtns button { flex: 1; padding: 11px; }
+  #top h1 { min-width: 0; }
+  #top button, #count { flex: none; }
+  @media (max-width: 440px) {
+    #top { gap: 5px; padding: 9px 8px 9px 10px; }
+    #top h1 { font-size: 14px; }
+    #top button.sm { padding: 6px 8px; font-size: 11px; }
+    #count { padding: 4px 8px; font-size: 11px; }
+    .tabs button { padding: 7px 2px; font-size: 11px; letter-spacing: -.02em; }
+    #toolRow button { padding: 9px 4px; font-size: 12px; }
+  }
 </style>
 </head>
 <body>
@@ -102,6 +112,7 @@
   <h1>🏠 避難所配置マップ</h1>
   <span id="dirty" hidden>未保存</span>
   <span id="count"></span>
+  <button class="sm" id="btnLang">EN</button>
   <button class="sm" id="btnView">平面</button>
   <button class="sm" id="btnRoster">名簿</button>
   <button class="sm" id="btnAdmin">👑</button>
@@ -113,7 +124,7 @@
 <div id="landing" hidden>
   <div class="card">
     <div class="title">🏠 避難所配置マップ</div>
-    <div class="hint">このページだけでは、マップは表示されません。リーダーから共有された<b>部屋のURL</b>を開いてください。</div>
+    <div class="hint" data-ht>このページだけでは、マップは表示されません。リーダーから共有された<b>部屋のURL</b>を開いてください。</div>
   </div>
   <div class="card" id="lAdmin" hidden>
     <div class="title">👑 部屋を作る(リーダー用)</div>
@@ -217,7 +228,7 @@
 
   <!-- リーダー: 座標登録 -->
   <div id="sCoord" class="col" hidden>
-    <div class="hint"><b>座標登録</b>: マップをタップして <b class="cA">A</b> を選び(座標が分かるマス)、右下のとなりが <b class="cB">B</b>、左下のとなりが <b class="cC">C</b>。ゲーム内座標を入れてください。</div>
+    <div class="hint" data-ht><b>座標登録</b>: マップをタップして <b class="cA">A</b> を選び(座標が分かるマス)、右下のとなりが <b class="cB">B</b>、左下のとなりが <b class="cC">C</b>。ゲーム内座標を入れてください。</div>
     <div class="row"><span class="chip a fix" id="chipA">A</span><input type="number" id="cA1" placeholder="X"><input type="number" id="cA2" placeholder="Y"></div>
     <div class="row"><span class="chip b fix" id="chipB">B</span><input type="number" id="cB1" placeholder="X"><input type="number" id="cB2" placeholder="Y"></div>
     <div class="row"><span class="chip c fix" id="chipC">C</span><input type="number" id="cC1" placeholder="X"><input type="number" id="cC2" placeholder="Y"></div>
@@ -338,9 +349,168 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"
 const mine = () => shelters.find(s => s.ownerUid === user?.uid);
 const editing = () => isAdmin && adminTab === "base" && !placing;
 
+/* ---------- 言語(日本語 / English) ---------- */
+// 日本語の文をそのままキーにした対応表。日本語表示のときは何も変えず、英語のときだけ置き換える
+const EN = {
+  "避難所配置マップ": "Shelter Placement Map",
+  "🏠 避難所配置マップ": "🏠 Shelter Placement Map",
+  "未保存": "Unsaved",
+  "平面": "Flat", "斜め": "Iso", "名簿": "Roster",
+  '<b>部屋のURL</b>': "<b>room URL</b>",
+  "このページだけでは、マップは表示されません。リーダーから共有された<b>部屋のURL</b>を開いてください。":
+    "The map isn't shown on this page alone. Please open the <b>room URL</b> shared by your leader.",
+  "👑 部屋を作る(リーダー用)": "👑 Create a room (leader only)",
+  "部屋の名前(英数字。例: ogs)": "Room name (letters/numbers, e.g. ogs)",
+  "名前の後ろにランダムな文字が付きます。URLを知っている人だけが入れます。": "Random characters are added after the name. Only people who know the URL can enter.",
+  "部屋を作ってベース編集へ": "Create room & edit base",
+  "タップしたマスの座標を表示します": "Tap a tile to see its coordinates",
+  "コピー": "Copy",
+  "自分の避難所": "My shelter", "メンバー管理": "Members", "ベース編集": "Base edit", "座標登録": "Coordinates",
+  "自分の避難所を置こう": "Place your shelter",
+  "名前(ゲーム内の名前)": "Name (your in-game name)",
+  "PIN(任意・機種変更の復帰用 4文字以上)": "PIN (optional, for recovering your spot on a new device; 4+ characters)",
+  "置く場所を決める": "Choose a spot",
+  "機種変更・ブラウザ変更で枠に戻れなくなったら": "If you can't get back to your spot after changing device/browser",
+  "上の「名前」と「PIN」を入れて押すと、自分の避難所に戻れます。PINを設定していなかった人はリーダーに「解放」を頼んでください。":
+    "Enter your name and PIN above, then press the button to get back to your shelter. If you didn't set a PIN, ask the leader to \"Release\" your spot.",
+  "名前+PINで復帰する": "Recover with name + PIN",
+  "場所を移動": "Move", "PIN設定": "Set PIN", "削除": "Delete",
+  "マップをタップして場所を選んでください": "Tap the map to choose a spot",
+  "緑=置ける / 赤=他の建物と重なっています。ドラッグでマップ移動、ピンチで拡大縮小。": "Green = OK / Red = overlaps another building. Drag to pan, pinch to zoom.",
+  "キャンセル": "Cancel", "ここに決定": "Place here",
+  "解放=その人の避難所を削除(置き直せる) / PIN解除=位置はそのままPINだけ消す / 移動=代わりに動かす":
+    "Release = delete that person's shelter (they can place again) / Clear PIN = keep the position, remove only the PIN / Move = move it for them",
+  "代理で追加する人の名前": "Name of the person to add as proxy",
+  "場所を決める": "Choose a spot",
+  "👑 ギルマス(共同管理者)の設定": "👑 Guild Master (co-admin) settings",
+  "合言葉を知っている人は、「👑」→「ギルマスで入る」で、ベース編集・メンバー管理・座標登録ができます。合言葉はギルマスにだけ伝えてください。変えても、すでに入った人はそのままです。やめてもらうときは「外す」を押します。":
+    "Anyone who knows the passphrase can tap 👑 → \"Enter as Guild Master\" to edit the base, manage members and register coordinates. Tell the passphrase only to the Guild Master. Changing it doesn't affect people who already joined. To remove someone, press \"Remove\".",
+  "合言葉を設定・変更": "Set / change passphrase",
+  "ベースマップ編集": "Base map editor",
+  "配置": "Place", "移動": "Move", "建物消": "Del bldg", "線": "Line", "線消": "Del line",
+  "サイズ": "Size", "上下": "Up/Down", "左右": "Left/Right", "↘右下": "↘ DR", "↙左下": "↙ DL",
+  "全消去": "Clear all", "破棄": "Discard", "保存": "Save",
+  '<b>座標登録</b>: マップをタップして <b class="cA">A</b> を選び(座標が分かるマス)、右下のとなりが <b class="cB">B</b>、左下のとなりが <b class="cC">C</b>。ゲーム内座標を入れてください。':
+    '<b>Coordinates</b>: tap the map to pick <b class="cA">A</b> (a tile whose coordinates you know). <b class="cB">B</b> is its down-right neighbor and <b class="cC">C</b> is its down-left neighbor. Enter the in-game coordinates.',
+  "登録して保存": "Register & save",
+  "ベース編集で保存していない変更も、いっしょに保存されます。": "Unsaved base edits are saved together.",
+  // 素材名
+  "MUD(南東)": "MUD (SE)", "MUD(南西)": "MUD (SW)", "MUD(北西)": "MUD (NW)", "MUD(北東)": "MUD (NE)",
+  "MUD(右上)": "MUD (2 tiles ↗)", "MUD(左上)": "MUD (2 tiles ↖)", "岩": "Rock",
+  // 表示・エラー
+  "権限がありません(他の人の分は変更できません / ルール未設定の可能性)": "Permission denied (you can't change other people's data / the rules may not be set)",
+  "👑 ログアウト": "👑 Log out", "管理者をログアウト": "Log out of admin", "管理者ログイン": "Admin login",
+  "🔑PIN設定済み": "🔑 PIN set",
+  "あなたの避難所: {0}({1}){2}": "Your shelter: {0} ({1}){2}",
+  "ここに置けます ({0})": "OK to place here ({0})",
+  "ここは他の建物と重なっています": "This spot overlaps another building",
+  "他の建物と重なっています": "Overlaps another building",
+  "まだ誰も置いていません": "Nobody has placed a shelter yet",
+  "まだ誰も入っていません": "No one has joined yet",
+  "表示": "Show", "PIN解除": "Clear PIN", "解放": "Release", "外す": "Remove", "ギルマス": "Guild Master",
+  "閉じる": "Close",
+  "名簿 ({0}/{1})": "Roster ({0}/{1})",
+  "座標 {0} をコピーしました": "Coordinates {0} copied",
+  "ベースマップを保存しました": "Base map saved",
+  "先に更新されています": "Updated by someone else",
+  "ほかの人(または別の端末)が先にベースマップを保存しました。そのまま保存すると相手の変更が消えるため、保存しませんでした。最新の内容を読み込みますか?(あなたの未保存の変更は破棄されます)":
+    "Someone else (or another device) saved the base map first. Saving now would erase their changes, so nothing was saved. Load the latest version? (Your unsaved changes will be discarded.)",
+  "読み込む": "Load",
+  "変更を破棄": "Discard changes", "保存していない変更を捨てて、保存済みの状態に戻します。": "Discard unsaved changes and go back to the saved version.", "破棄する": "Discard",
+  "ベースの建物と赤線をすべて消します(保存するまで確定しません)。": "Remove all base buildings and red lines (not final until you save).", "消す": "Delete",
+  "先にマップをタップして、基準のマス(A)を選んでください": "First tap the map to choose the reference tile (A)",
+  "A・B・Cの座標をすべて数字で入力してください": "Enter numbers for all of the A, B and C coordinates",
+  "この部屋はまだ作られていません": "This room hasn't been created yet",
+  "名前を入力してください": "Please enter a name",
+  "PINは4文字以上にしてください": "PIN must be at least 4 characters",
+  "その名前はすでに使われています": "That name is already taken",
+  "定員に達しています": "The room is full",
+  "名前とPINを入力してください": "Enter your name and PIN",
+  "名前かPINが違います(PIN未設定の人はリーダーに解放を頼んでください)": "Wrong name or PIN (if you never set a PIN, ask the leader to release your spot)",
+  "復帰しました!": "Welcome back!",
+  "避難所を削除": "Delete shelter", "あなたの避難所を削除します。あとで置き直せます。": "Your shelter will be deleted. You can place it again later.",
+  "削除する": "Delete", "削除しました": "Deleted",
+  "PINの設定": "Set PIN",
+  "機種変更・ブラウザ変更のときに、名前+PINで自分の枠に戻れます。空欄で登録するとPINを解除します。": "If you change device or browser, you can get back to your spot with your name + PIN. Leave it empty to clear the PIN.",
+  "新しいPIN(4文字以上)": "New PIN (4+ characters)",
+  "設定": "Set", "PINを設定しました": "PIN set", "PINを解除しました": "PIN cleared",
+  "先に他の人が置きました。別の場所を選んでください": "Someone else placed there first. Choose another spot",
+  "他の人が先に置きました。別の場所を選んでください": "Someone else placed there first. Choose another spot",
+  "決定しました!": "Placed!",
+  "{0} のPINを解除しました": "PIN cleared for {0}",
+  "枠を解放": "Release spot", "「{0}」の避難所を削除します。本人が置き直せるようになります。": "This deletes {0}'s shelter. They will be able to place it again.",
+  "解放する": "Release", "解放しました": "Released",
+  "ログアウトしました": "Logged out",
+  "このアカウントはリーダーではありません": "This account is not the leader",
+  "このドメインをFirebaseの承認済みドメインに追加してください": "Add this domain to Firebase's authorized domains",
+  "<b>ギルマス</b>の方は、リーダーから聞いた合言葉を入れてください。リーダーは下の「Googleでログイン」です。":
+    '<b>Guild Masters</b>: enter the passphrase you got from the leader. The leader uses "Sign in with Google" below.',
+  "合言葉": "Passphrase", "呼び名(任意。例: ギルマス)": "Display name (optional, e.g. Guild Master)",
+  "ギルマスで入る": "Enter as Guild Master", "Googleでログイン": "Sign in with Google",
+  "合言葉を入力してください": "Enter the passphrase",
+  "合言葉が違います(または、まだ設定されていません)": "Wrong passphrase (or none has been set yet)",
+  "ギルマス用の合言葉": "Guild Master passphrase",
+  "半角英数字・記号で、12文字以上がおすすめです(最低8文字・スペースなし)。短いと当てられるおそれがあります。ギルマスにだけ伝えてください。":
+    "Use letters, numbers and symbols (no spaces). 12+ characters recommended, 8 minimum. Short ones can be guessed. Tell it only to the Guild Master.",
+  "半角英数字・記号で8文字以上(スペースなし)にしてください": "Use 8+ letters, numbers or symbols (no spaces)",
+  "合言葉を設定しました": "Passphrase set",
+  "ギルマスを外す": "Remove Guild Master", "「{0}」の管理者権限をなくします。": "This removes admin rights from \"{0}\".", "外しました": "Removed",
+  "読み込めません。Firestoreのルールを設定してください": "Can't load data. Please set up the Firestore rules",
+  "この部屋はまだ作られていません。URLを確認してください": "This room hasn't been created yet. Please check the URL",
+  "ほかの人がベースマップを保存しました。保存しようとすると読み込み直しになります": "Someone else saved the base map. Saving now will require reloading it",
+  "リーダーとしてログインしました": "Signed in as leader", "ギルマスとして入りました": "Entered as Guild Master",
+};
+const ENRX = [
+  [/^エラー: ([\s\S]*)$/, m => "Error: " + m[1]],
+  [/^ログインに失敗: ([\s\S]*)$/, m => "Sign-in failed: " + m[1]],
+];
+let lang = (() => {
+  try { const s = localStorage.getItem("lang"); if (s === "ja" || s === "en") return s; } catch {}
+  return /^ja/i.test(navigator.language || "") ? "ja" : "en";
+})();
+function T(s, ...a) {
+  let r = s;
+  if (lang === "en") {
+    const [, pre, k, post] = s.match(/^(\s*)([\s\S]*?)(\s*)$/);
+    let t = EN[k];
+    if (t === undefined) for (const [re, f] of ENRX) { const m = k.match(re); if (m) { t = f(m); break; } }
+    if (t !== undefined) r = pre + t + post;
+  }
+  return a.length ? r.replace(/\{(\d+)\}/g, (_, i) => a[i]) : r;
+}
+const HAS_JP = /[぀-ヿ一-鿿]/;
+// 画面に出ている日本語を、いまの言語に合わせて置き換える(元の日本語は覚えておいて、切り替えで戻せる)
+function trDom(n) {
+  if (n.nodeType === 3) {
+    if (n.__jp === undefined) { if (!HAS_JP.test(n.nodeValue)) return; n.__jp = n.nodeValue; }
+    const v = T(n.__jp); if (n.nodeValue !== v) n.nodeValue = v;
+    return;
+  }
+  if (n.nodeType !== 1 || /^(SCRIPT|STYLE|CANVAS)$/.test(n.tagName)) return;
+  for (const at of ["placeholder", "title"]) {
+    if (!n.hasAttribute(at)) continue;
+    const key = "__jp_" + at;
+    if (n[key] === undefined) { const v = n.getAttribute(at); if (!HAS_JP.test(v)) continue; n[key] = v; }
+    const v = T(n[key]); if (n.getAttribute(at) !== v) n.setAttribute(at, v);
+  }
+  if (n.hasAttribute("data-ht")) { // 中に <b> などを含む文は、HTMLごと置き換える
+    if (n.__jpHtml === undefined) n.__jpHtml = n.innerHTML;
+    if (n.__lang !== lang) { n.innerHTML = T(n.__jpHtml); n.__lang = lang; }
+    return;
+  }
+  n.childNodes.forEach(trDom);
+}
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.title = T("避難所配置マップ");
+  $("btnLang").textContent = lang === "en" ? "日本語" : "EN";
+  trDom(document.body);
+  buildAssetGrid(); render(); renderLanding();
+}
+
 let toastTimer;
 function toast(msg) {
-  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  const t = $("toast"); t.textContent = T(msg); t.hidden = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2800);
 }
 function errMsg(e) {
@@ -350,10 +520,10 @@ function errMsg(e) {
 
 /* ---------- モーダル ---------- */
 function modal(title, bodyHtml, buttons) {
-  $("mTitle").textContent = title; $("mBody").innerHTML = bodyHtml;
+  $("mTitle").textContent = T(title); $("mBody").innerHTML = bodyHtml; trDom($("mBody"));
   const bar = $("mBtns"); bar.innerHTML = "";
   buttons.forEach(b => {
-    const el = document.createElement("button"); el.textContent = b.label; el.className = b.cls || "";
+    const el = document.createElement("button"); el.textContent = T(b.label); el.className = b.cls || "";
     el.onclick = async () => { const r = b.fn ? await b.fn() : undefined; if (r !== false) closeModal(); };
     bar.appendChild(el);
   });
@@ -385,7 +555,7 @@ function gameCoords(gx, gy) {
     y: Math.round(c.y0 + dx * (c.y1 - c.y0) + dy * (c.y2 - c.y0)),
   };
 }
-const coordText = (gx, gy) => { const g = gameCoords(gx, gy); return g ? `X:${g.x} Y:${g.y}` : `マス ${gx}:${gy}`; };
+const coordText = (gx, gy) => { const g = gameCoords(gx, gy); return g ? `X:${g.x} Y:${g.y}` : (lang === "en" ? `Tile ${gx}:${gy}` : `マス ${gx}:${gy}`); };
 
 /* ---------- 当たり判定 ---------- */
 const overlap = (ax, ay, aw, ah, bx, by, bw, bh) => ax < bx + bw && bx < ax + aw && ay < by + bh && by < ay + ah;
@@ -455,7 +625,7 @@ function planBlock(name, x, y, gw, gh, color) {
   ctx.font = `bold ${gw > 1 ? 13 : 9}px "Zen Maru Gothic", system-ui, sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillStyle = name === "tile" ? "#2b3358" : "#fff";
-  ctx.fillText(name.startsWith("MUD") ? "MUD" : name === "ROCK2" ? "岩" : name, c.x, c.y);
+  ctx.fillText(name.startsWith("MUD") ? "MUD" : name === "ROCK2" ? T("岩") : T(name), c.x, c.y);
   ctx.restore();
 }
 function badge(text, gx, gy, gw, gh, s, color) {
@@ -684,9 +854,9 @@ function render() {
   const me = mine();
   $("count").textContent = `${shelters.length}/${MAX_MEMBERS}`;
   $("dirty").hidden = !baseDirty;
-  $("btnView").textContent = planView ? "斜め" : "平面";
-  $("btnAdmin").textContent = isAdmin ? "👑 ログアウト" : "👑";
-  $("btnAdmin").title = isAdmin ? "管理者をログアウト" : "管理者ログイン";
+  $("btnView").textContent = T(planView ? "斜め" : "平面");
+  $("btnAdmin").textContent = isAdmin ? T("👑 ログアウト") : "👑";
+  $("btnAdmin").title = T(isAdmin ? "管理者をログアウト" : "管理者ログイン");
 
   $("adminTabs").hidden = !isAdmin;
   document.querySelectorAll("#adminTabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === adminTab));
@@ -703,13 +873,13 @@ function render() {
     $("chipC").textContent = `C  ${cell.gx}:${cell.gy + 1}`;
   } else { $("chipA").textContent = "A"; $("chipB").textContent = "B"; $("chipC").textContent = "C"; }
 
-  if (me) $("meTitle").textContent = `あなたの避難所: ${me.name}(${coordText(me.gx + HQ.gw - 1, me.gy + HQ.gh - 1)})${me.pinHash ? " 🔑PIN設定済み" : ""}`;
+  if (me) $("meTitle").textContent = T("あなたの避難所: {0}({1}){2}", me.name, coordText(me.gx + HQ.gw - 1, me.gy + HQ.gh - 1), me.pinHash ? " " + T("🔑PIN設定済み") : "");
 
   if (placing) {
     $("btnOk").disabled = !(preview && preview.ok);
     $("placeTitle").textContent = preview
-      ? (preview.ok ? `ここに置けます (${coordText(preview.x + HQ.gw - 1, preview.y + HQ.gh - 1)})` : "ここは他の建物と重なっています")
-      : "マップをタップして場所を選んでください";
+      ? (preview.ok ? T("ここに置けます ({0})", coordText(preview.x + HQ.gw - 1, preview.y + HQ.gh - 1)) : T("ここは他の建物と重なっています"))
+      : T("マップをタップして場所を選んでください");
   }
 
   // マス情報
@@ -717,13 +887,14 @@ function render() {
   if (shown) {
     $("cellTxt").textContent = "📍 " + coordText(shown.gx, shown.gy);
     $("btnCopy").hidden = !gameCoords(shown.gx, shown.gy);
-  } else { $("cellTxt").textContent = "タップしたマスの座標を表示します"; $("btnCopy").hidden = true; }
+  } else { $("cellTxt").textContent = T("タップしたマスの座標を表示します"); $("btnCopy").hidden = true; }
 
   if (isAdmin && adminTab === "members") renderAdminList();
   $("sLeaderOnly").hidden = !isLeader;
   if (isLeader && adminTab === "members") renderCoList();
   document.querySelectorAll("#toolRow button").forEach(b => b.classList.toggle("on", b.dataset.tool === tool));
   draw();
+  trDom($("top")); trDom($("panel"));
 }
 function renderAdminList() {
   const L = $("aList");
@@ -929,19 +1100,24 @@ $("aList").addEventListener("click", async e => {
   try {
     if (b.dataset.a === "jump") jumpTo(s.gx, s.gy);
     else if (b.dataset.a === "move") { placing = { target: id }; preview = { x: s.gx, y: s.gy, ok: true }; jumpTo(s.gx, s.gy); render(); }
-    else if (b.dataset.a === "pin") { await updateDoc(ref, { pinHash: null, updatedAt: serverTimestamp() }); toast(`${s.name} のPINを解除しました`); }
-    else if (b.dataset.a === "free" && await confirmDlg("枠を解放", `「${s.name}」の避難所を削除します。本人が置き直せるようになります。`, "解放する")) {
+    else if (b.dataset.a === "pin") { await updateDoc(ref, { pinHash: null, updatedAt: serverTimestamp() }); toast(T("{0} のPINを解除しました", s.name)); }
+    else if (b.dataset.a === "free" && await confirmDlg("枠を解放", T("「{0}」の避難所を削除します。本人が置き直せるようになります。", s.name), "解放する")) {
       await deleteDoc(ref); toast("解放しました");
     }
   } catch (err) { toast(errMsg(err)); }
 });
 
+$("btnLang").onclick = () => {
+  lang = lang === "en" ? "ja" : "en";
+  try { localStorage.setItem("lang", lang); } catch {}
+  applyLang();
+};
 $("btnView").onclick = () => {
   planView = !planView; render();
 };
 $("btnRoster").onclick = () => {
   const arr = [...shelters].sort((a, b) => a.name.localeCompare(b.name, "ja"));
-  const body = modal(`名簿 (${arr.length}/${MAX_MEMBERS})`,
+  const body = modal(T("名簿 ({0}/{1})", arr.length, MAX_MEMBERS),
     arr.length ? `<div class="list" style="max-height:50dvh">${arr.map(s => `<div class="item" data-id="${esc(s.id)}">
       <span class="nm">${esc(s.name)}</span><span class="hint">${esc(coordText(s.gx + HQ.gw - 1, s.gy + HQ.gh - 1))}</span>
       <button class="sm pri">表示</button></div>`).join("")}</div>` : '<div class="hint">まだ誰も置いていません</div>',
@@ -958,7 +1134,7 @@ $("btnCopy").onclick = () => {
   const g = shown && gameCoords(shown.gx, shown.gy); if (!g) return;
   const txt = `${g.x}:${g.y}`;
   const fb = () => { const t = document.createElement("textarea"); t.value = txt; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); };
-  (navigator.clipboard?.writeText(txt) || Promise.reject()).catch(fb).finally(() => toast(`座標 ${txt} をコピーしました`));
+  (navigator.clipboard?.writeText(txt) || Promise.reject()).catch(fb).finally(() => toast(T("座標 {0} をコピーしました", txt)));
 };
 
 /* ---------- リーダーログイン ---------- */
@@ -985,7 +1161,7 @@ $("btnAdmin").onclick = async () => {
     return;
   }
   if (!ROOM) { googleLogin(); return; }
-  const body = modal("管理者ログイン", `<div class="hint"><b>ギルマス</b>の方は、リーダーから聞いた合言葉を入れてください。リーダーは下の「Googleでログイン」です。</div>
+  const body = modal("管理者ログイン", `<div class="hint" data-ht><b>ギルマス</b>の方は、リーダーから聞いた合言葉を入れてください。リーダーは下の「Googleでログイン」です。</div>
     <input type="password" id="mIn" maxlength="64" placeholder="合言葉">
     <input type="text" id="mName" maxlength="20" placeholder="呼び名(任意。例: ギルマス)">`, [
     { label: "キャンセル" },
@@ -1015,7 +1191,7 @@ $("btnSecret").onclick = () => {
 $("coList").addEventListener("click", async e => {
   const b = e.target.closest("button"); if (!b) return;
   const id = b.closest(".item").dataset.id, c = coList.find(x => x.id === id); if (!c) return;
-  if (!(await confirmDlg("ギルマスを外す", `「${c.n || "ギルマス"}」の管理者権限をなくします。`, "外す"))) return;
+  if (!(await confirmDlg("ギルマスを外す", T("「{0}」の管理者権限をなくします。", T(c.n || "ギルマス")), "外す"))) return;
   try { await deleteDoc(doc(db, "rooms", ROOM, "admins", id)); toast("外しました"); } catch (err) { toast(errMsg(err)); }
 });
 
@@ -1102,7 +1278,7 @@ $("btnMakeRoom").onclick = async () => {
 };
 window.addEventListener("beforeunload", e => { if (baseDirty) { e.preventDefault(); e.returnValue = ""; } });
 
-buildAssetGrid(); syncSliders(); loadAssets(); resize(); render(); renderLanding();
+syncSliders(); loadAssets(); resize(); applyLang();
 </script>
 </body>
 </html>
