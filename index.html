@@ -124,10 +124,10 @@
 <div id="landing" hidden>
   <div class="card">
     <div class="title">🏠 避難所配置マップ</div>
-    <div class="hint" data-ht>このページだけでは、マップは表示されません。リーダーから共有された<b>部屋のURL</b>を開いてください。</div>
+    <div class="hint" data-ht>このページだけでは、マップは表示されません。作成者から共有された<b>部屋のURL</b>を開いてください。</div>
   </div>
   <div class="card" id="lAdmin" hidden>
-    <div class="title">👑 部屋を作る(リーダー用)</div>
+    <div class="title">👑 部屋を作る(作成者用)</div>
     <input type="text" id="inRoom" maxlength="20" placeholder="部屋の名前(英数字。例: ogs)">
     <div class="hint">名前の後ろにランダムな文字が付きます。URLを知っている人だけが入れます。</div>
     <button class="pri" id="btnMakeRoom">部屋を作ってベース編集へ</button>
@@ -158,7 +158,7 @@
     <details>
       <summary>機種変更・ブラウザ変更で枠に戻れなくなったら</summary>
       <div class="col" style="margin-top:8px">
-        <div class="hint">上の「名前」と「PIN」を入れて押すと、自分の避難所に戻れます。PINを設定していなかった人はリーダーに「解放」を頼んでください。</div>
+        <div class="hint">上の「名前」と「PIN」を入れて押すと、自分の避難所に戻れます。PINを設定していなかった人は作成者に「解放」を頼んでください。</div>
         <button id="btnClaim">名前+PINで復帰する</button>
       </div>
     </details>
@@ -184,7 +184,7 @@
     </div>
   </div>
 
-  <!-- リーダー: メンバー管理 -->
+  <!-- 作成者: メンバー管理 -->
   <div id="sMembers" class="col" hidden>
     <div class="title">メンバー管理</div>
     <div class="hint">解放=その人の避難所を削除(置き直せる) / PIN解除=位置はそのままPINだけ消す / 移動=代わりに動かす</div>
@@ -193,7 +193,7 @@
       <button class="pri fix" id="btnProxy">場所を決める</button>
     </div>
     <div id="aList" class="list"></div>
-    <details id="sLeaderOnly" hidden>
+    <details id="sCreatorOnly" hidden>
       <summary>👑 ギルマス(共同管理者)の設定</summary>
       <div class="col" style="margin-top:8px">
         <div class="hint">合言葉を知っている人は、「👑」→「ギルマスで入る」で、ベース編集・メンバー管理・座標登録ができます。合言葉はギルマスにだけ伝えてください。変えても、すでに入った人はそのままです。やめてもらうときは「外す」を押します。</div>
@@ -203,7 +203,7 @@
     </details>
   </div>
 
-  <!-- リーダー: ベース編集 -->
+  <!-- 作成者: ベース編集 -->
   <div id="sBase" class="col" hidden>
     <div class="title">ベースマップ編集</div>
     <div class="row" id="toolRow">
@@ -226,7 +226,7 @@
     </div>
   </div>
 
-  <!-- リーダー: 座標登録 -->
+  <!-- 作成者: 座標登録 -->
   <div id="sCoord" class="col" hidden>
     <div class="hint" data-ht><b>座標登録</b>: マップをタップして <b class="cA">A</b> を選び(座標が分かるマス)、右下のとなりが <b class="cB">B</b>、左下のとなりが <b class="cC">C</b>。ゲーム内座標を入れてください。</div>
     <div class="row"><span class="chip a fix" id="chipA">A</span><input type="number" id="cA1" placeholder="X"><input type="number" id="cA2" placeholder="Y"></div>
@@ -268,7 +268,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const ROOM = (new URLSearchParams(location.search).get("room") || "").replace(/[\/\s]/g, "_") || null;
 if (!ROOM) document.body.classList.add("landing");
-let roomMissing = false; // リーダーがまだ作っていない部屋
+let roomMissing = false; // 作成者がまだ作っていない部屋
 
 /* ---------- 素材 ---------- */
 const IMG = "https://raw.githubusercontent.com/orihina0193/map-tool/main/img/";
@@ -331,7 +331,7 @@ async function loadAssets() {
 const T_W = 64, T_H = 32;
 const HQ = PM["HQ"];
 let user = null, isAdmin = false;
-let isLeader = false, isCo = false; // リーダー(Google) / ギルマス(合言葉で入った共同管理者)。isAdmin はどちらか
+let isCreator = false, isCo = false; // 作成者(Google) / ギルマス(合言葉で入った共同管理者)。isAdmin はどちらか
 let coList = [];
 let base = { m: [], l: [], c: null }, baseDirty = false, lastBaseSnap = null;
 let editRev = 0, saving = false; // 編集を始めたときのベースの版 / 保存中
@@ -357,9 +357,9 @@ const EN = {
   "未保存": "Unsaved",
   "平面": "Flat", "斜め": "Iso", "名簿": "Roster",
   '<b>部屋のURL</b>': "<b>room URL</b>",
-  "このページだけでは、マップは表示されません。リーダーから共有された<b>部屋のURL</b>を開いてください。":
-    "The map isn't shown on this page alone. Please open the <b>room URL</b> shared by your leader.",
-  "👑 部屋を作る(リーダー用)": "👑 Create a room (leader only)",
+  "このページだけでは、マップは表示されません。作成者から共有された<b>部屋のURL</b>を開いてください。":
+    "The map isn't shown on this page alone. Please open the <b>room URL</b> shared by your creator.",
+  "👑 部屋を作る(作成者用)": "👑 Create a room (creator only)",
   "部屋の名前(英数字。例: ogs)": "Room name (letters/numbers, e.g. ogs)",
   "名前の後ろにランダムな文字が付きます。URLを知っている人だけが入れます。": "Random characters are added after the name. Only people who know the URL can enter.",
   "部屋を作ってベース編集へ": "Create room & edit base",
@@ -371,8 +371,8 @@ const EN = {
   "PIN(任意・機種変更の復帰用 4文字以上)": "PIN (optional, for recovering your spot on a new device; 4+ characters)",
   "置く場所を決める": "Choose a spot",
   "機種変更・ブラウザ変更で枠に戻れなくなったら": "If you can't get back to your spot after changing device/browser",
-  "上の「名前」と「PIN」を入れて押すと、自分の避難所に戻れます。PINを設定していなかった人はリーダーに「解放」を頼んでください。":
-    "Enter your name and PIN above, then press the button to get back to your shelter. If you didn't set a PIN, ask the leader to \"Release\" your spot.",
+  "上の「名前」と「PIN」を入れて押すと、自分の避難所に戻れます。PINを設定していなかった人は作成者に「解放」を頼んでください。":
+    "Enter your name and PIN above, then press the button to get back to your shelter. If you didn't set a PIN, ask the creator to \"Release\" your spot.",
   "名前+PINで復帰する": "Recover with name + PIN",
   "場所を移動": "Move", "PIN設定": "Set PIN", "削除": "Delete",
   "マップをタップして場所を選んでください": "Tap the map to choose a spot",
@@ -426,7 +426,7 @@ const EN = {
   "その名前はすでに使われています": "That name is already taken",
   "定員に達しています": "The room is full",
   "名前とPINを入力してください": "Enter your name and PIN",
-  "名前かPINが違います(PIN未設定の人はリーダーに解放を頼んでください)": "Wrong name or PIN (if you never set a PIN, ask the leader to release your spot)",
+  "名前かPINが違います(PIN未設定の人は作成者に解放を頼んでください)": "Wrong name or PIN (if you never set a PIN, ask the creator to release your spot)",
   "復帰しました!": "Welcome back!",
   "避難所を削除": "Delete shelter", "あなたの避難所を削除します。あとで置き直せます。": "Your shelter will be deleted. You can place it again later.",
   "削除する": "Delete", "削除しました": "Deleted",
@@ -441,10 +441,10 @@ const EN = {
   "枠を解放": "Release spot", "「{0}」の避難所を削除します。本人が置き直せるようになります。": "This deletes {0}'s shelter. They will be able to place it again.",
   "解放する": "Release", "解放しました": "Released",
   "ログアウトしました": "Logged out",
-  "このアカウントはリーダーではありません": "This account is not the leader",
+  "このアカウントは作成者ではありません": "This account is not the creator",
   "このドメインをFirebaseの承認済みドメインに追加してください": "Add this domain to Firebase's authorized domains",
-  "<b>ギルマス</b>の方は、リーダーから聞いた合言葉を入れてください。リーダーは下の「Googleでログイン」です。":
-    '<b>Guild Masters</b>: enter the passphrase you got from the leader. The leader uses "Sign in with Google" below.',
+  "<b>ギルマス</b>の方は、作成者から聞いた合言葉を入れてください。作成者は下の「Googleでログイン」です。":
+    '<b>Guild Masters</b>: enter the passphrase you got from the creator. The creator uses "Sign in with Google" below.',
   "合言葉": "Passphrase", "呼び名(任意。例: ギルマス)": "Display name (optional, e.g. Guild Master)",
   "ギルマスで入る": "Enter as Guild Master", "Googleでログイン": "Sign in with Google",
   "合言葉を入力してください": "Enter the passphrase",
@@ -458,7 +458,7 @@ const EN = {
   "読み込めません。Firestoreのルールを設定してください": "Can't load data. Please set up the Firestore rules",
   "この部屋はまだ作られていません。URLを確認してください": "This room hasn't been created yet. Please check the URL",
   "ほかの人がベースマップを保存しました。保存しようとすると読み込み直しになります": "Someone else saved the base map. Saving now will require reloading it",
-  "リーダーとしてログインしました": "Signed in as leader", "ギルマスとして入りました": "Entered as Guild Master",
+  "作成者としてログインしました": "Signed in as creator", "ギルマスとして入りました": "Entered as Guild Master",
 };
 const ENRX = [
   [/^エラー: ([\s\S]*)$/, m => "Error: " + m[1]],
@@ -890,8 +890,8 @@ function render() {
   } else { $("cellTxt").textContent = T("タップしたマスの座標を表示します"); $("btnCopy").hidden = true; }
 
   if (isAdmin && adminTab === "members") renderAdminList();
-  $("sLeaderOnly").hidden = !isLeader;
-  if (isLeader && adminTab === "members") renderCoList();
+  $("sCreatorOnly").hidden = !isCreator;
+  if (isCreator && adminTab === "members") renderCoList();
   document.querySelectorAll("#toolRow button").forEach(b => b.classList.toggle("on", b.dataset.tool === tool));
   draw();
   trDom($("top")); trDom($("panel"));
@@ -1035,7 +1035,7 @@ $("btnClaim").onclick = async () => {
   if (!name || !pin) { toast("名前とPINを入力してください"); return; }
   const h = await hashPin(pin);
   const s = shelters.find(x => normName(x.name) === normName(name));
-  if (!s || !s.pinHash || s.pinHash !== h) { toast("名前かPINが違います(PIN未設定の人はリーダーに解放を頼んでください)"); return; }
+  if (!s || !s.pinHash || s.pinHash !== h) { toast("名前かPINが違います(PIN未設定の人は作成者に解放を頼んでください)"); return; }
   try {
     await updateDoc(doc(db, "rooms", ROOM, "shelters", s.id), { ownerUid: user.uid, updatedAt: serverTimestamp() });
     toast("復帰しました!"); jumpTo(s.gx, s.gy);
@@ -1075,7 +1075,7 @@ $("btnOk").onclick = async () => {
   }
   try {
     if (t.target === "new" && t.proxy) {
-      // 代理登録: 持ち主なし(ownerUid が空)。本人が戻るときはリーダーが解放して置き直してもらう
+      // 代理登録: 持ち主なし(ownerUid が空)。本人が戻るときは作成者が解放して置き直してもらう
       const id = "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       await setDoc(doc(db, "rooms", ROOM, "shelters", id), {
         ownerUid: "", name: t.name, gx: preview.x, gy: preview.y, pinHash: null, updatedAt: serverTimestamp(),
@@ -1137,7 +1137,7 @@ $("btnCopy").onclick = () => {
   (navigator.clipboard?.writeText(txt) || Promise.reject()).catch(fb).finally(() => toast(T("座標 {0} をコピーしました", txt)));
 };
 
-/* ---------- リーダーログイン ---------- */
+/* ---------- 作成者ログイン ---------- */
 async function sha256hex(s) {
   const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -1145,7 +1145,7 @@ async function sha256hex(s) {
 async function googleLogin() {
   try {
     const r = await signInWithPopup(auth, new GoogleAuthProvider());
-    if (r.user.email !== ADMIN_EMAIL) { await signOut(auth); toast("このアカウントはリーダーではありません"); }
+    if (r.user.email !== ADMIN_EMAIL) { await signOut(auth); toast("このアカウントは作成者ではありません"); }
   } catch (e) {
     if (e.code === "auth/unauthorized-domain") toast("このドメインをFirebaseの承認済みドメインに追加してください");
     else if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") toast(errMsg(e));
@@ -1161,7 +1161,7 @@ $("btnAdmin").onclick = async () => {
     return;
   }
   if (!ROOM) { googleLogin(); return; }
-  const body = modal("管理者ログイン", `<div class="hint" data-ht><b>ギルマス</b>の方は、リーダーから聞いた合言葉を入れてください。リーダーは下の「Googleでログイン」です。</div>
+  const body = modal("管理者ログイン", `<div class="hint" data-ht><b>ギルマス</b>の方は、作成者から聞いた合言葉を入れてください。作成者は下の「Googleでログイン」です。</div>
     <input type="password" id="mIn" maxlength="64" placeholder="合言葉">
     <input type="text" id="mName" maxlength="20" placeholder="呼び名(任意。例: ギルマス)">`, [
     { label: "キャンセル" },
@@ -1223,13 +1223,13 @@ function startListening() {
 }
 function updateAdmin() {
   const was = isAdmin;
-  isAdmin = isLeader || isCo;
+  isAdmin = isCreator || isCo;
   if (!isAdmin) { adminTab = "me"; tool = "place"; selItem = null; }
-  if (isAdmin && !was) toast(isLeader ? "リーダーとしてログインしました" : "ギルマスとして入りました");
+  if (isAdmin && !was) toast(isCreator ? "作成者としてログインしました" : "ギルマスとして入りました");
   if (was && !isAdmin) { placing = null; preview = null; }
   render(); renderLanding();
 }
-// ギルマス判定: この端末のuidが rooms/{room}/admins にいるか / リーダーは全員分の名簿も見る
+// ギルマス判定: この端末のuidが rooms/{room}/admins にいるか / 作成者は全員分の名簿も見る
 let coKey = "", coUnsub = null, listKey = "", listUnsub = null;
 function watchCo() {
   const k1 = ROOM && user ? ROOM + "/" + user.uid : "";
@@ -1237,7 +1237,7 @@ function watchCo() {
     coKey = k1; coUnsub?.(); coUnsub = null; isCo = false;
     if (k1 && user.isAnonymous) coUnsub = onSnapshot(doc(db, "rooms", ROOM, "admins", user.uid), s => { isCo = s.exists(); updateAdmin(); }, () => {});
   }
-  const k2 = ROOM && isLeader ? ROOM : "";
+  const k2 = ROOM && isCreator ? ROOM : "";
   if (k2 !== listKey) {
     listKey = k2; listUnsub?.(); listUnsub = null; coList = [];
     if (k2) listUnsub = onSnapshot(collection(db, "rooms", ROOM, "admins"), s => { coList = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => {});
@@ -1246,19 +1246,19 @@ function watchCo() {
 onAuthStateChanged(auth, u => {
   if (!u) { signInAnonymously(auth).catch(e => toast("ログインに失敗: " + (e.code || e.message))); return; }
   user = u;
-  isLeader = !u.isAnonymous && u.email === ADMIN_EMAIL && u.emailVerified;
+  isCreator = !u.isAnonymous && u.email === ADMIN_EMAIL && u.emailVerified;
   placing = null; preview = null;
   watchCo();
   if (ROOM) startListening();
   updateAdmin();
 });
 
-/* ---------- 部屋を作る(リーダー専用・部屋名なしのURLで表示) ---------- */
+/* ---------- 部屋を作る(作成者専用・部屋名なしのURLで表示) ---------- */
 const savedRooms = () => { try { return JSON.parse(localStorage.getItem("shelterRooms") || "[]"); } catch { return []; } };
 function renderLanding() {
   $("landing").hidden = !!ROOM;
   if (ROOM) return;
-  $("lAdmin").hidden = !isLeader;
+  $("lAdmin").hidden = !isCreator;
   const base0 = location.origin + location.pathname;
   $("lRooms").innerHTML = savedRooms().map(r => {
     const u = `${base0}?room=${encodeURIComponent(r)}`;
@@ -1266,7 +1266,7 @@ function renderLanding() {
   }).join("");
 }
 $("btnMakeRoom").onclick = async () => {
-  if (!isLeader) return;
+  if (!isCreator) return;
   const raw = $("inRoom").value.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
   const rnd = Array.from(crypto.getRandomValues(new Uint8Array(8)), b => (b % 36).toString(36)).join("");
   const name = (raw ? raw + "-" : "") + rnd;
