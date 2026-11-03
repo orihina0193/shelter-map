@@ -63,6 +63,7 @@
   .row > * { flex: 1; min-width: 0; }
   .row > .fix { flex: none; }
   .col { display: flex; flex-direction: column; gap: 10px; }
+  .hint a { color: var(--ac); font-weight: 700; }
   .hint { font-size: 12px; color: var(--sub); line-height: 1.6; }
   .title { font-weight: 900; font-size: 15px; letter-spacing: .02em; }
   details summary { cursor: pointer; font-weight: 700; font-size: 13px; color: var(--sub); }
@@ -235,6 +236,12 @@
     <button class="pri" id="btnCoordSave">登録して保存</button>
     <div class="hint">ベース編集で保存していない変更も、いっしょに保存されます。</div>
   </div>
+
+  <!-- 使い方ページへのリンク -->
+  <div id="guideLinks" class="hint" style="text-align:center">
+    <a href="guide-member.html" target="_blank" rel="noopener">📖 使い方</a>
+    <span id="guideAdmin" hidden> | <a href="guide-admin.html" target="_blank" rel="noopener">👑 管理者用の使い方</a></span>
+  </div>
 </div>
 
 <div id="modal" hidden>
@@ -394,6 +401,7 @@ const EN = {
     '<b>Coordinates</b>: tap the map to pick <b class="cA">A</b> (a tile whose coordinates you know). <b class="cB">B</b> is its down-right neighbor and <b class="cC">C</b> is its down-left neighbor. Enter the in-game coordinates.',
   "登録して保存": "Register & save",
   "ベース編集で保存していない変更も、いっしょに保存されます。": "Unsaved base edits are saved together.",
+  "📖 使い方": "📖 How to use", "👑 管理者用の使い方": "👑 Admin guide",
   // 素材名
   "MUD(南東)": "MUD (SE)", "MUD(南西)": "MUD (SW)", "MUD(北西)": "MUD (NW)", "MUD(北東)": "MUD (NE)",
   "MUD(右上)": "MUD (2 tiles ↗)", "MUD(左上)": "MUD (2 tiles ↖)", "岩": "Rock",
@@ -891,6 +899,7 @@ function render() {
 
   if (isAdmin && adminTab === "members") renderAdminList();
   $("sCreatorOnly").hidden = !isCreator;
+  $("guideAdmin").hidden = !isAdmin;
   if (isCreator && adminTab === "members") renderCoList();
   document.querySelectorAll("#toolRow button").forEach(b => b.classList.toggle("on", b.dataset.tool === tool));
   draw();
