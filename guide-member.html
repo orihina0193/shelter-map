@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shelter Map – Member Guide / メンバー用ガイド</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root { --ac:#5468ff; --ac2:#7b5cff; --soft:#eef0ff; --ink:#1e2540; --sub:#6b7391; --line:#e3e7f3; --bg:#eef2fb; --ok:#12b886; --dng:#f0506e; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); line-height:1.8; font-size:15px;
+    font-family:"Zen Maru Gothic", system-ui, -apple-system, "Hiragino Maru Gothic ProN", "Meiryo", sans-serif; }
+  html[lang=ja] [data-l=en], html[lang=en] [data-l=ja] { display:none !important; }
+  header { background:linear-gradient(120deg,#2b3a8f,#5468ff 55%,#8a5cff); color:#fff; padding:22px 16px 26px; }
+  .wrap { max-width:720px; margin:0 auto; }
+  header .wrap { display:flex; align-items:flex-start; gap:12px; }
+  header h1 { margin:0; font-size:22px; font-weight:900; flex:1; line-height:1.4; }
+  header p { margin:6px 0 0; opacity:.9; font-size:13px; }
+  #lang { flex:none; background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.4); border-radius:12px; padding:8px 14px; font:inherit; font-weight:700; cursor:pointer; }
+  main { padding:16px; }
+  section { background:#fff; border:1px solid var(--line); border-radius:18px; padding:18px 18px 14px; margin:0 auto 14px; max-width:720px; box-shadow:0 6px 20px rgba(40,55,120,.08); }
+  h2 { margin:0 0 8px; font-size:17px; font-weight:900; }
+  h2 .n { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,var(--ac),var(--ac2)); color:#fff; font-size:13px; margin-right:8px; }
+  ol, ul { margin:6px 0; padding-left:22px; }
+  li { margin:4px 0; }
+  b.k { background:var(--soft); color:#3a47b8; border-radius:6px; padding:1px 7px; white-space:nowrap; font-weight:700; }
+  .g { color:var(--ok); font-weight:900; } .r { color:var(--dng); font-weight:900; }
+  .note { background:#fff8e6; border:1px solid #ffe3a3; border-radius:12px; padding:9px 12px; font-size:13.5px; margin:10px 0 4px; }
+  .tip { background:var(--soft); border:1px solid #dfe3ff; border-radius:12px; padding:9px 12px; font-size:13.5px; margin:10px 0 4px; }
+  footer { text-align:center; color:var(--sub); font-size:12px; padding:6px 16px 28px; }
+  @media print { header { background:#2b3a8f !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; } #lang { display:none; } section { box-shadow:none; break-inside:avoid; } }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div>
+    <h1><span data-l="ja">🏠 避難所配置マップ ― 使い方(メンバー用)</span><span data-l="en">🏠 Shelter Placement Map ― Member Guide</span></h1>
+    <p><span data-l="ja">自分のHQ(避難所)を、マップに置くだけの人向けの説明です。</span><span data-l="en">For members who just need to place their own HQ (shelter) on the map.</span></p>
+  </div>
+  <button id="lang" type="button">EN</button>
+</div></header>
+
+<main>
+<section>
+  <h2><span class="n">1</span><span data-l="ja">マップを開く</span><span data-l="en">Open the map</span></h2>
+  <p data-l="ja">作成者から共有された<b>部屋のURL</b>を、スマホやパソコンのブラウザで開きます。URLに「?room=…」が付いているものが、あなたのギルドのマップです。</p>
+  <p data-l="en">Open the <b>room URL</b> your creator shared, in a browser on your phone or PC. The URL ends with "?room=…". That is your guild's map.</p>
+  <ul>
+    <li data-l="ja">画面右上の <b class="k">EN</b> / <b class="k">日本語</b> ボタンで、言語を切り替えられます。</li>
+    <li data-l="en">Use the <b class="k">EN</b> / <b class="k">日本語</b> button at the top right to switch the language.</li>
+    <li data-l="ja"><b class="k">平面</b> / <b class="k">斜め</b> ボタンで、色つきのマス表示と、建物の絵つき表示を切り替えられます。</li>
+    <li data-l="en">The <b class="k">Flat</b> / <b class="k">Iso</b> button switches between colored tiles and the illustrated view.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">2</span><span data-l="ja">自分の避難所を置く</span><span data-l="en">Place your shelter</span></h2>
+  <ol>
+    <li data-l="ja">下のパネルの <b>名前</b> 欄に、ゲーム内の名前を入力します(20文字まで。ほかの人と同じ名前は使えません)。</li>
+    <li data-l="en">In the bottom panel, type your <b>in-game name</b> (up to 20 characters; names already used by someone else are not allowed).</li>
+    <li data-l="ja"><b>PIN</b> 欄は任意です。入れておくと、機種変更やブラウザ変更のときに自分の場所へ戻れます(4文字以上)。おすすめです。</li>
+    <li data-l="en">The <b>PIN</b> is optional (4+ characters). If you set one, you can get your spot back after changing device or browser. Recommended.</li>
+    <li data-l="ja"><b class="k">置く場所を決める</b> を押します。</li>
+    <li data-l="en">Press <b class="k">Choose a spot</b>.</li>
+    <li data-l="ja">マップの置きたい場所をタップします。タップしたマスが、HQ(2×2マス)の<b>一番南(下)のマス</b>になります。<span class="g">緑</span>なら置けます。<span class="r">赤</span>は、ほかの建物と重なっているので、別の場所を選んでください。</li>
+    <li data-l="en">Tap the spot on the map. The tile you tap becomes the <b>southernmost (bottom) tile</b> of your HQ (2×2 tiles). <span class="g">Green</span> means OK. <span class="r">Red</span> means it overlaps another building, so choose another spot.</li>
+    <li data-l="ja"><b class="k">ここに決定</b> を押すと、完了です。</li>
+    <li data-l="en">Press <b class="k">Place here</b> and you're done.</li>
+  </ol>
+  <div class="tip" data-l="ja">ドラッグでマップを動かし、ピンチ(2本指)やマウスのホイールで拡大・縮小できます。自分の避難所は、青い枠と青い名前で表示されます。</div>
+  <div class="tip" data-l="en">Drag to move the map; pinch (two fingers) or use the mouse wheel to zoom. Your own shelter has a blue outline and a blue name tag.</div>
+</section>
+
+<section>
+  <h2><span class="n">3</span><span data-l="ja">移動・削除・PINの設定</span><span data-l="en">Move, delete, set a PIN</span></h2>
+  <p data-l="ja">置いたあとは、パネルに次のボタンが出ます。</p>
+  <p data-l="en">After you place it, the panel shows these buttons.</p>
+  <ul>
+    <li data-l="ja"><b class="k">場所を移動</b>: 置き直したい場所をタップして、<b class="k">ここに決定</b>。</li>
+    <li data-l="en"><b class="k">Move</b>: tap the new spot, then press <b class="k">Place here</b>.</li>
+    <li data-l="ja"><b class="k">PIN設定</b>: PINを設定・変更します。空欄で決定すると、PINを解除します。</li>
+    <li data-l="en"><b class="k">Set PIN</b>: set or change your PIN. Leave it empty to clear it.</li>
+    <li data-l="ja"><b class="k">削除</b>: 自分の避難所を消します。あとでもう一度置けます。</li>
+    <li data-l="en"><b class="k">Delete</b>: remove your shelter. You can place it again later.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">4</span><span data-l="ja">機種変更・ブラウザ変更で、場所に戻れなくなったら</span><span data-l="en">If you changed device/browser and lost your spot</span></h2>
+  <p data-l="ja">自分の場所は、使っているブラウザに結びついています。別のスマホ・別のブラウザで開いたり、ブラウザのデータを消したりすると、「まだ置いていない」状態に見えます。</p>
+  <p data-l="en">Your spot is tied to the browser you used. If you open the map on another phone or browser, or clear your browser data, it will look like you haven't placed yet.</p>
+  <ol>
+    <li data-l="ja">「機種変更・ブラウザ変更で枠に戻れなくなったら」を開きます。</li>
+    <li data-l="en">Open "If you can't get back to your spot after changing device/browser".</li>
+    <li data-l="ja">上の欄に、<b>前と同じ名前</b>と<b>PIN</b>を入れて、<b class="k">名前+PINで復帰する</b> を押します。</li>
+    <li data-l="en">Enter your <b>same name</b> and <b>PIN</b> in the fields above, then press <b class="k">Recover with name + PIN</b>.</li>
+  </ol>
+  <div class="note" data-l="ja">PINを設定していなかった場合は、作成者に「解放」を頼んでください。解放されたあと、もう一度置けます。</div>
+  <div class="note" data-l="en">If you never set a PIN, ask the creator to "Release" your spot. After that you can place it again.</div>
+  <div class="note" data-l="ja">PINは簡単な合言葉です。銀行やゲームなど、ほかで使っているパスワードは使わないでください。</div>
+  <div class="note" data-l="en">The PIN is only a simple passphrase. Do not reuse passwords from your bank, game or other accounts.</div>
+</section>
+
+<section>
+  <h2><span class="n">5</span><span data-l="ja">マップの見方</span><span data-l="en">Reading the map</span></h2>
+  <ul>
+    <li data-l="ja"><b class="k">名簿</b>: 全員の名前の一覧です。<b class="k">表示</b> を押すと、その人の場所へ移動します。</li>
+    <li data-l="en"><b class="k">Roster</b>: the list of everyone. Press <b class="k">Show</b> to jump to that person's spot.</li>
+    <li data-l="ja">マスをタップすると、画面の下に<b>座標</b>が出ます。ゲームの座標が登録されている部屋では、<b class="k">コピー</b> で座標をコピーできます。</li>
+    <li data-l="en">Tap a tile to see its <b>coordinates</b> at the bottom. In rooms where the in-game coordinates are registered, <b class="k">Copy</b> copies them.</li>
+    <li data-l="ja">建物(2×2マス)をタップすると、一番南のマスの座標が出ます。</li>
+    <li data-l="en">If you tap a building (2×2 tiles), the coordinates of its southernmost tile are shown.</li>
+    <li data-l="ja">右上の数字(例: 12/100)は、置いた人数と定員です。</li>
+    <li data-l="en">The number at the top (e.g. 12/100) is how many have placed, out of the maximum.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">6</span><span data-l="ja">困ったとき</span><span data-l="en">Troubleshooting</span></h2>
+  <ul>
+    <li data-l="ja"><b>「この部屋はまだ作られていません」と出る</b>: URLが違う可能性があります。作成者から共有されたURLを、最後までコピーして開いてください。</li>
+    <li data-l="en"><b>"This room hasn't been created yet"</b>: the URL may be wrong. Open the full URL shared by your creator.</li>
+    <li data-l="ja"><b>「その名前はすでに使われています」と出る</b>: ほかの人、または以前の自分が使っています。以前の自分なら、上の「4」の方法で戻れます。</li>
+    <li data-l="en"><b>"That name is already taken"</b>: someone else, or your earlier self, is using it. If it was you, recover it with the steps in section 4.</li>
+    <li data-l="ja"><b>置こうとした場所が赤い</b>: ほかの建物や避難所と重なっています。少しずらしてください。</li>
+    <li data-l="en"><b>The spot turns red</b>: it overlaps another building or shelter. Shift it a little.</li>
+    <li data-l="ja"><b>「定員に達しています」と出る</b>: 部屋が満員です。作成者に相談してください。</li>
+    <li data-l="en"><b>"The room is full"</b>: ask your creator.</li>
+    <li data-l="ja"><b>表示が古い・おかしい</b>: ページを再読み込みしてください(パソコンは Ctrl+Shift+R)。</li>
+    <li data-l="en"><b>The page looks outdated or broken</b>: reload it (Ctrl+Shift+R on a PC).</li>
+  </ul>
+  <div class="tip" data-l="ja">置けるのは、自分のHQ(避難所)1つだけです。ほかの建物は作成者・ギルマスが置きます。</div>
+  <div class="tip" data-l="en">You can only place your own HQ (one per person). Other buildings are placed by the creator and the Guild Master.</div>
+</section>
+</main>
+<footer><span data-l="ja">避難所配置マップ メンバー用ガイド</span><span data-l="en">Shelter Placement Map – Member Guide</span></footer>
+
+<script>
+(function () {
+  var l;
+  try { l = localStorage.getItem("lang"); } catch (e) {}
+  if (l !== "ja" && l !== "en") l = /^ja/i.test(navigator.language || "") ? "ja" : "en";
+  var b = document.getElementById("lang");
+  function set(v) {
+    l = v; document.documentElement.lang = v; b.textContent = v === "en" ? "日本語" : "EN";
+    document.title = v === "en" ? "Shelter Map – Member Guide" : "避難所配置マップ – メンバー用ガイド";
+    try { localStorage.setItem("lang", v); } catch (e) {}
+  }
+  b.onclick = function () { set(l === "en" ? "ja" : "en"); };
+  set(l);
+})();
+</script>
+</body>
+</html>
